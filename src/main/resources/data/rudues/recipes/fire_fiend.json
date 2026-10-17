@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["ABA", "BNB", "ABA"],
+  "key": {
+    "A": { "item": "minecraft:amethyst_shard" },
+    "B": { "item": "minecraft:blaze_rod" },
+    "N": { "item": "minecraft:nether_star" }
+  },
+  "result": { "item": "rudues:fire_fiend", "count": 1 }
+}

@@ -1,0 +1,33 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All Rights Reserved"
+
+[[mods]]
+modId="rudues"
+version="1.0.0"
+displayName="Rudues Mod"
+description='''
+Adds the Fire Fiend: consume it for permanent Strength V and Resistance III,
+plus a skill wheel (hold R) with purple-fire abilities and the Hero of Hell demon form. Requires GeckoLib.
+'''
+
+[[dependencies.rudues]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.rudues]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.21)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.rudues]]
+modId="geckolib"
+mandatory=true
+versionRange="[4.4,)"
+ordering="NONE"
+side="BOTH"
