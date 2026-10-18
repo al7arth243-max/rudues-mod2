@@ -35,21 +35,21 @@ public class DemonEntity extends Entity implements GeoEntity {
     private static final EntityDataAccessor<Boolean> INTRO =
             SynchedEntityData.defineId(DemonEntity.class, EntityDataSerializers.BOOLEAN);
 
-    private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.rage_demon.idle");
-    private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.rage_demon.run");
-    private static final RawAnimation JUMP = RawAnimation.begin().thenPlayAndHold("animation.rage_demon.jump");
-    private static final RawAnimation SPAWN = RawAnimation.begin().thenPlay("animation.rage_demon.spawn");
-    private static final RawAnimation BEAM = RawAnimation.begin().thenPlay("animation.rage_demon.concentrated_beam");
-    private static final RawAnimation OBLITERATOR = RawAnimation.begin().thenPlay("animation.rage_demon.obliterator_maximum");
-    private static final RawAnimation HELLFIRE = RawAnimation.begin().thenPlay("animation.rage_demon.hellfire");
-    private static final RawAnimation METEOR_RUSH = RawAnimation.begin().thenPlayAndHold("animation.rage_demon.meteor_rush");
-    private static final RawAnimation METEOR_LEAP = RawAnimation.begin().thenPlayAndHold("animation.rage_demon.meteor_leap");
-    private static final RawAnimation METEOR_SLAM = RawAnimation.begin().thenPlay("animation.rage_demon.meteor_slam");
-    private static final RawAnimation METEOR_RECOVER = RawAnimation.begin().thenPlay("animation.rage_demon.meteor_recover");
-    private static final RawAnimation TREE_RUSH = RawAnimation.begin().thenPlayAndHold("animation.rage_demon.tree_rush");
-    private static final RawAnimation TREE_COMBO = RawAnimation.begin().thenPlay("animation.rage_demon.tree_combo");
-    private static final RawAnimation TREE_MISS = RawAnimation.begin().thenPlay("animation.rage_demon.tree_miss");
-    private static final RawAnimation SLASH = RawAnimation.begin().thenPlay("animation.rage_demon.slash_combo");
+    private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.infernal_titan.idle");
+    private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.infernal_titan.run");
+    private static final RawAnimation JUMP = RawAnimation.begin().thenPlayAndHold("animation.infernal_titan.jump");
+    private static final RawAnimation SPAWN = RawAnimation.begin().thenPlay("animation.infernal_titan.spawn");
+    private static final RawAnimation BEAM = RawAnimation.begin().thenPlay("animation.infernal_titan.concentrated_beam");
+    private static final RawAnimation OBLITERATOR = RawAnimation.begin().thenPlay("animation.infernal_titan.obliterator_maximum");
+    private static final RawAnimation HELLFIRE = RawAnimation.begin().thenPlay("animation.infernal_titan.hellfire");
+    private static final RawAnimation METEOR_RUSH = RawAnimation.begin().thenPlayAndHold("animation.infernal_titan.meteor_rush");
+    private static final RawAnimation METEOR_LEAP = RawAnimation.begin().thenPlayAndHold("animation.infernal_titan.meteor_leap");
+    private static final RawAnimation METEOR_SLAM = RawAnimation.begin().thenPlay("animation.infernal_titan.meteor_slam");
+    private static final RawAnimation METEOR_RECOVER = RawAnimation.begin().thenPlay("animation.infernal_titan.meteor_recover");
+    private static final RawAnimation TREE_RUSH = RawAnimation.begin().thenPlayAndHold("animation.infernal_titan.tree_rush");
+    private static final RawAnimation TREE_COMBO = RawAnimation.begin().thenPlay("animation.infernal_titan.tree_combo");
+    private static final RawAnimation TREE_MISS = RawAnimation.begin().thenPlay("animation.infernal_titan.tree_miss");
+    private static final RawAnimation SLASH = RawAnimation.begin().thenPlay("animation.infernal_titan.slash_combo");
 
     /** length of the spawn/roar animation in ticks */
     private static final int INTRO_TICKS = 28;

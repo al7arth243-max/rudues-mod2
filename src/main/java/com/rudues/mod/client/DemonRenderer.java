@@ -20,13 +20,13 @@ import java.util.UUID;
 
 /**
  * Renders the Hero of Hell demon.
- * Assets: geo/entity/rage_demon.geo.json, textures/entity/rage_demon.png (glow baked in),
- *         animations/entity/rage_demon.animation.json
+ * Assets: geo/entity/infernal_titan.geo.json, textures/entity/infernal_titan.png,
+ *         animations/entity/infernal_titan.animation.json
  */
 public class DemonRenderer extends GeoEntityRenderer<DemonEntity> {
     public DemonRenderer(EntityRendererProvider.Context context) {
-        super(context, new DefaultedEntityGeoModel<>(new ResourceLocation(RuduesMod.MODID, "rage_demon")));
-        // the model is ~4.25 blocks tall; scale it up so it stands 7 blocks tall
+        super(context, new DefaultedEntityGeoModel<>(new ResourceLocation(RuduesMod.MODID, "infernal_titan")));
+        // the titan model is ~5.3 blocks tall at scale 1; DEMON_SCALE makes it stand 7 blocks tall
         withScale(HeroConstants.DEMON_SCALE);
     }
 
