@@ -49,6 +49,10 @@ public class DemonEntity extends Entity implements GeoEntity {
     private static final RawAnimation TREE_RUSH = RawAnimation.begin().thenPlayAndHold("animation.infernal_titan.tree_rush");
     private static final RawAnimation TREE_COMBO = RawAnimation.begin().thenPlay("animation.infernal_titan.tree_combo");
     private static final RawAnimation TREE_MISS = RawAnimation.begin().thenPlay("animation.infernal_titan.tree_miss");
+    private static final RawAnimation HR_RUSH = RawAnimation.begin().thenPlayAndHold("animation.infernal_titan.hr_rush");
+    private static final RawAnimation HR_SLAM = RawAnimation.begin().thenPlayAndHold("animation.infernal_titan.hr_slam");
+    private static final RawAnimation HR_DRAG = RawAnimation.begin().thenLoop("animation.infernal_titan.hr_drag");
+    private static final RawAnimation HR_THROW = RawAnimation.begin().thenPlay("animation.infernal_titan.hr_throw");
     private static final RawAnimation SLASH = RawAnimation.begin().thenPlay("animation.infernal_titan.slash_combo");
 
     /** length of the spawn/roar animation in ticks */
@@ -124,7 +128,11 @@ public class DemonEntity extends Entity implements GeoEntity {
                 .triggerableAnim("meteor_recover", METEOR_RECOVER)
                 .triggerableAnim("tree_rush", TREE_RUSH)
                 .triggerableAnim("tree_combo", TREE_COMBO)
-                .triggerableAnim("tree_miss", TREE_MISS));
+                .triggerableAnim("tree_miss", TREE_MISS)
+                .triggerableAnim("hr_rush", HR_RUSH)
+                .triggerableAnim("hr_slam", HR_SLAM)
+                .triggerableAnim("hr_drag", HR_DRAG)
+                .triggerableAnim("hr_throw", HR_THROW));
     }
 
     private PlayState mainAnimation(AnimationState<DemonEntity> state) {

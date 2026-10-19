@@ -63,6 +63,8 @@ public class HeroForm {
         UUID grabbed;
         boolean grabNoAi;
         double peakY;
+        double lastX;
+        double lastZ;
         ServerBossEvent bar;
     }
 
@@ -236,6 +238,7 @@ public class HeroForm {
                 case SLASH_COMBO -> tickSlash(p, s, level);
                 case METEOR_IMPACT -> tickMeteor(p, s, level);
                 case TREE_OF_SIN -> tickTree(p, s, level);
+                case HEROS_RUSH -> tickHerosRush(p, s, level);
                 default -> s.attack = null;
             }
         }
@@ -332,6 +335,13 @@ public class HeroForm {
                 s.busy = 220;
                 anim = "meteor_rush";
                 s.mPhase = 1;
+                s.mTicks = 0;
+                s.grabbed = null;
+            }
+            case HEROS_RUSH -> {
+                s.busy = 230;
+                anim = "hr_rush";
+                s.mPhase = 21;
                 s.mTicks = 0;
                 s.grabbed = null;
             }
@@ -640,10 +650,11 @@ public class HeroForm {
         s.grabbed = null;
     }
 
-    private static void holdTarget(ServerPlayer p, LivingEntity t, Vec3 flat, ServerLevel level, double dist, double height) {
-        double x = p.getX() + flat.x * dist;
+    /** Places a held victim relative to the demon: forward, sideways (positive = his right hand) and height. */
+    private static void holdTarget(ServerPlayer p, LivingEntity t, Vec3 flat, ServerLevel level, double dist, double lateral, double height) {
+        double x = p.getX() + flat.x * dist + (-flat.z) * lateral;
         double y = p.getY() + height;
-        double z = p.getZ() + flat.z * dist;
+        double z = p.getZ() + flat.z * dist + flat.x * lateral;
         if (t instanceof ServerPlayer tp) {
             tp.teleportTo(level, x, y, z, tp.getYRot(), tp.getXRot());
         } else {
@@ -726,7 +737,8 @@ public class HeroForm {
                     endMeteor(p, s, level, 10, true);
                     return;
                 }
-                holdTarget(p, target, flat, level, 2.6, 3.6);
+                double rise = Math.min(1.0, s.mTicks / 8.0);
+                holdTarget(p, target, flat, level, 3.4 - 2.0 * rise, 1.0, 3.6 + 3.0 * rise);
                 s.peakY = Math.max(s.peakY, p.getY());
                 if (s.mTicks % 2 == 0) {
                     level.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), p.getX(), p.getY() + 0.5, p.getZ(), 3, 1.0, 0.3, 1.0, 0.02);
@@ -745,7 +757,8 @@ public class HeroForm {
             case 3 -> {
                 p.fallDistance = 0;
                 if (target != null && target.isAlive()) {
-                    holdTarget(p, target, flat, level, 2.6, 3.6);
+                    double drop = Math.min(1.0, s.mTicks / 6.0);
+                    holdTarget(p, target, flat, level, 1.4 + 2.0 * drop, 1.0, 6.6 - 5.7 * drop);
                 }
                 if (s.mTicks < 4) {
                     p.setDeltaMovement(flat.x * 0.3, -2.8, flat.z * 0.3);
@@ -765,7 +778,7 @@ public class HeroForm {
         Vec3 c = p.position();
         releaseGrab(level, s);
         if (target != null && target.isAlive()) {
-            double gx = c.x + flat.x * 2.6, gz = c.z + flat.z * 2.6;
+            double gx = c.x + flat.x * 3.4 + (-flat.z) * 1.0, gz = c.z + flat.z * 3.4 + flat.x * 1.0;
             if (target instanceof ServerPlayer tp) {
                 tp.teleportTo(level, gx, c.y, gz, tp.getYRot(), tp.getXRot());
             } else {
@@ -887,7 +900,7 @@ public class HeroForm {
             endMeteor(p, s, level, 10, false);
             return;
         }
-        holdTarget(p, target, flat, level, 3.0, 2.8);
+        holdTarget(p, target, flat, level, 3.2, -1.0, 2.6);
         p.fallDistance = 0;
         if (s.mTicks % 3 == 0) {
             level.sendParticles(ModParticles.PURPLE_EMBER.get(), target.getX(), target.getY() + 1.0, target.getZ(), 2, 0.5, 0.6, 0.5, 0.05);
@@ -946,6 +959,185 @@ public class HeroForm {
         level.sendParticles(ModParticles.PURPLE_EMBER.get(), hand.x, hand.y, hand.z, 50, 1.2, 1.2, 1.2, 0.08);
         FxUtil.purpleBurst(level, hand, 40, 1.0);
         level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.WOOD_BREAK, SoundSource.PLAYERS, 2.0F, 0.4F);
+    }
+
+    // ------------------------------------------------------------------ 7. Hero's Rush (one-handed grab, ground slam, drag, throw)
+    private static BlockParticleOption groundChips(ServerLevel level, double x, double y, double z) {
+        net.minecraft.world.level.block.state.BlockState st = level.getBlockState(net.minecraft.core.BlockPos.containing(x, y - 0.5, z));
+        if (st.isAir()) {
+            st = Blocks.DIRT.defaultBlockState();
+        }
+        return new BlockParticleOption(ParticleTypes.BLOCK, st);
+    }
+
+    private static void hurtHeld(ServerPlayer p, LivingEntity t, float dmg) {
+        t.setInvulnerable(false);
+        t.invulnerableTime = 0;
+        t.hurt(p.damageSources().playerAttack(p), dmg);
+        if (t.isAlive()) {
+            t.setInvulnerable(true);
+        }
+    }
+
+    private static void tickHerosRush(ServerPlayer p, State s, ServerLevel level) {
+        s.mTicks++;
+        Vec3 look = p.getLookAngle();
+        Vec3 flat = new Vec3(look.x, 0, look.z);
+        flat = flat.lengthSqr() < 1.0E-4 ? new Vec3(0, 0, 1) : flat.normalize();
+        LivingEntity target = (s.grabbed != null && level.getEntity(s.grabbed) instanceof LivingEntity le) ? le : null;
+
+        switch (s.mPhase) {
+            // ---- 21: charge, right hand outstretched, until it closes on something
+            case 21 -> {
+                if (s.mTicks == 1) {
+                    level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.PLAYERS, 2.0F, 1.6F);
+                }
+                p.setDeltaMovement(flat.x * 1.7, -0.08, flat.z * 1.7);
+                p.hurtMarked = true;
+                p.fallDistance = 0;
+                level.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), p.getX() - flat.x * 1.5, p.getY() + 0.5, p.getZ() - flat.z * 1.5, 3, 1.0, 0.3, 1.0, 0.02);
+                level.sendParticles(ModParticles.PURPLE_SPARK.get(), p.getX(), p.getY() + 1.5, p.getZ(), 2, 1.2, 1.2, 1.2, 0.2);
+
+                AABB box = p.getBoundingBox().inflate(1.4, 0.0, 1.4).move(flat.scale(1.8));
+                LivingEntity hit = null;
+                double best = Double.MAX_VALUE;
+                for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, box, x -> validTarget(x, p))) {
+                    double d = e.distanceToSqr(p);
+                    if (d < best) {
+                        best = d;
+                        hit = e;
+                    }
+                }
+                if (hit != null) {
+                    s.grabbed = hit.getUUID();
+                    if (hit instanceof net.minecraft.world.entity.Mob mob) {
+                        s.grabNoAi = mob.isNoAi();
+                        mob.setNoAi(true);
+                    } else {
+                        hit.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 240, 10, false, false, false));
+                        hit.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 240, 10, false, false, false));
+                    }
+                    hit.setInvulnerable(true);
+                    hit.setDeltaMovement(Vec3.ZERO);
+                    s.mPhase = 22;
+                    s.mTicks = 0;
+                    trigger(p, s, "hr_slam");
+                    FxUtil.purpleBurst(level, hit.getBoundingBox().getCenter(), 60, 0.8);
+                    level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.2F, 1.6F);
+                } else if (s.mTicks >= 16) {
+                    p.setDeltaMovement(flat.x * 0.2, 0, flat.z * 0.2);
+                    p.hurtMarked = true;
+                    endMeteor(p, s, level, 14, true);
+                }
+            }
+            // ---- 22: hoist, then smash them into the ground
+            case 22 -> {
+                if (target == null || !target.isAlive()) {
+                    endMeteor(p, s, level, 10, true);
+                    return;
+                }
+                p.setDeltaMovement(0, -0.08, 0);
+                p.hurtMarked = true;
+                if (s.mTicks <= 3) {
+                    double f = s.mTicks / 3.0;
+                    holdTarget(p, target, flat, level, 3.4 - 1.8 * f, 1.0, 3.6 + 2.4 * f);       // up and back over his shoulder
+                } else {
+                    double f = Math.min(1.0, (s.mTicks - 3) / 3.0);
+                    holdTarget(p, target, flat, level, 1.6 + 1.8 * f, 1.0, 6.0 - 5.6 * f);       // down into the dirt
+                }
+                if (s.mTicks == 6) {
+                    Vec3 at = new Vec3(p.getX() + flat.x * 3.4 + (-flat.z), p.getY(), p.getZ() + flat.z * 3.4 + flat.x);
+                    hurtHeld(p, target, 90.0F);
+                    level.sendParticles(groundChips(level, at.x, at.y, at.z), at.x, at.y + 0.3, at.z, 80, 1.5, 0.4, 1.5, 0.35);
+                    FxUtil.purpleBurst(level, at.add(0, 0.5, 0), 80, 1.2);
+                    level.sendParticles(ParticleTypes.EXPLOSION, at.x, at.y + 0.3, at.z, 3, 0.8, 0.2, 0.8, 0);
+                    for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, new AABB(at, at).inflate(6.0), x -> validTarget(x, p) && x != target)) {
+                        e.invulnerableTime = 0;
+                        e.hurt(p.damageSources().playerAttack(p), 35.0F);
+                        e.setDeltaMovement(e.getDeltaMovement().add(0, 0.6, 0));
+                        e.hurtMarked = true;
+                    }
+                    level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 2.0F, 0.7F);
+                    level.playSound(null, at.x, at.y, at.z, SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 1.5F, 0.5F);
+                }
+                if (s.mTicks >= 11) {
+                    s.mPhase = 23;
+                    s.mTicks = 0;
+                    s.lastX = p.getX();
+                    s.lastZ = p.getZ();
+                    trigger(p, s, "hr_drag");
+                }
+            }
+            // ---- 23: sprint forward with them scraping along the ground
+            case 23 -> {
+                if (target == null || !target.isAlive()) {
+                    endMeteor(p, s, level, 10, true);
+                    return;
+                }
+                p.setDeltaMovement(flat.x * 1.5, -0.08, flat.z * 1.5);
+                p.hurtMarked = true;
+                p.fallDistance = 0;
+                holdTarget(p, target, flat, level, 1.9, 1.0, 0.0);
+                double vx = target.getX(), vy = target.getY(), vz = target.getZ();
+                level.sendParticles(groundChips(level, vx, vy, vz), vx, vy + 0.2, vz, 6, 0.5, 0.2, 0.5, 0.25);
+                level.sendParticles(ModParticles.PURPLE_SPARK.get(), vx, vy + 0.3, vz, 2, 0.5, 0.2, 0.5, 0.3);
+                if (s.mTicks % 3 == 0) {
+                    level.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), vx - flat.x * 0.8, vy + 0.2, vz - flat.z * 0.8, 2, 0.4, 0.2, 0.4, 0.02);
+                }
+                if (s.mTicks % 5 == 0) {
+                    level.playSound(null, vx, vy, vz, SoundEvents.GRAVEL_BREAK, SoundSource.PLAYERS, 1.6F, 0.6F);
+                }
+                if (s.mTicks % 4 == 0) {
+                    hurtHeld(p, target, 14.0F);
+                }
+                // stop at a wall, or after about 1.5 seconds of running
+                double moved = Math.hypot(p.getX() - s.lastX, p.getZ() - s.lastZ);
+                if (s.mTicks % 3 == 0) {
+                    s.lastX = p.getX();
+                    s.lastZ = p.getZ();
+                }
+                boolean blocked = s.mTicks > 8 && s.mTicks % 3 == 1 && moved < 0.25;
+                if (s.mTicks >= 30 || blocked) {
+                    s.mPhase = 24;
+                    s.mTicks = 0;
+                    trigger(p, s, "hr_throw");
+                }
+            }
+            // ---- 24: wind up and hurl them away
+            case 24 -> {
+                if (s.mTicks < 6) {
+                    p.setDeltaMovement(flat.x * 0.2, -0.08, flat.z * 0.2);
+                    p.hurtMarked = true;
+                    if (target != null && target.isAlive()) {
+                        holdTarget(p, target, flat, level, 1.2, 1.0, 1.4 + 1.0 * (s.mTicks / 6.0));
+                    }
+                }
+                if (s.mTicks == 6) {
+                    if (target != null && target.isAlive()) {
+                        holdTarget(p, target, flat, level, 2.6, 1.0, 2.6);
+                        releaseGrab(level, s);
+                        target.invulnerableTime = 0;
+                        target.hurt(p.damageSources().playerAttack(p), 100.0F);
+                        target.setSecondsOnFire(15);
+                        target.setDeltaMovement(flat.x * 2.6, 0.75, flat.z * 2.6);
+                        target.hurtMarked = true;
+                        FxUtil.purpleBurst(level, target.getBoundingBox().getCenter(), 70, 0.8);
+                        level.sendParticles(ModParticles.PURPLE_SPARK.get(), target.getX(), target.getY() + 1.0, target.getZ(), 40, 0.8, 0.8, 0.8, 0.5);
+                    } else {
+                        releaseGrab(level, s);
+                    }
+                    level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 2.0F, 0.5F);
+                    level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.PLAYERS, 1.5F, 1.3F);
+                }
+                if (s.mTicks >= 13) {
+                    releaseGrab(level, s);
+                    s.attack = null;
+                    s.mPhase = 0;
+                    s.busy = 12;
+                }
+            }
+            default -> s.attack = null;
+        }
     }
 
     // ------------------------------------------------------------------ helpers

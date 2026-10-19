@@ -42,7 +42,9 @@
   "gui.rudues.cast_hint": "Cast it with [%s]",
   "entity.rudues.concentrated_beam": "Concentrated Beam",
   "ability.rudues.meteor_impact": "Meteor Impact",
-  "ability.rudues.meteor_impact.desc": "Rush forward; if you catch an enemy you grab them, leap high and slam them into the ground.",
+  "ability.rudues.meteor_impact.desc": "Charge, snatch an enemy in one hand, leap high and slam them into the ground.",
   "ability.rudues.tree_of_sin": "Tree of Sin",
-  "ability.rudues.tree_of_sin.desc": "Summon an axe of living roots, rush an enemy, grab them and carve them with a savage combo."
+  "ability.rudues.tree_of_sin.desc": "Summon an axe of living roots, rush an enemy, grab them and carve them with a savage combo.",
+  "ability.rudues.heros_rush": "Hero's Rush",
+  "ability.rudues.heros_rush.desc": "Charge and seize an enemy in one hand, slam them into the ground, drag them at a sprint, then hurl them away."
 }
