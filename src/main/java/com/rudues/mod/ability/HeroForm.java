@@ -829,7 +829,7 @@ public class HeroForm {
     }
 
     // ------------------------------------------------------------------ 6. Tree of Sin (root axe, rush, grab, savage combo)
-    private static final int[] TREE_HITS = {8, 16, 24, 32, 44};
+    private static final int[] TREE_HITS = {20, 44, 68, 92, 120};   // 1.0 / 2.2 / 3.4 / 4.6 / 6.0 seconds: slow and heavy
     private static final BlockParticleOption WOOD_CHIPS =
             new BlockParticleOption(ParticleTypes.BLOCK, Blocks.DARK_OAK_LOG.defaultBlockState());
 
@@ -880,6 +880,7 @@ public class HeroForm {
                 p.setDeltaMovement(0, 0, 0);
                 p.hurtMarked = true;
                 trigger(p, s, "tree_combo");
+                rootPlayer(p, 140);   // planted: the swings are heavy
                 level.sendParticles(WOOD_CHIPS, hit.getX(), hit.getY() + 1.0, hit.getZ(), 40, 0.6, 0.8, 0.6, 0.2);
                 FxUtil.purpleBurst(level, hit.getBoundingBox().getCenter(), 60, 0.8);
                 level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.0F, 1.6F);
@@ -910,7 +911,7 @@ public class HeroForm {
                 treeSlash(p, s, level, target, flat, i);
             }
         }
-        if (s.mTicks >= 54) {
+        if (s.mTicks >= 136) {
             // axe withers, victim is cast to the ground
             witherAxe(p, level);
             if (target.isAlive()) {
@@ -932,7 +933,7 @@ public class HeroForm {
         boolean finisher = idx == TREE_HITS.length - 1;
         target.setInvulnerable(false);
         target.invulnerableTime = 0;
-        target.hurt(p.damageSources().playerAttack(p), finisher ? 130.0F : 45.0F);
+        target.hurt(p.damageSources().playerAttack(p), finisher ? 170.0F : 65.0F);
         if (target.isAlive()) {
             target.setInvulnerable(true);
         }
@@ -944,6 +945,11 @@ public class HeroForm {
         FxUtil.purpleBurst(level, c, finisher ? 110 : 45, 0.8);
         level.sendParticles(ModParticles.PURPLE_SPARK.get(), c.x, c.y, c.z, finisher ? 60 : 24, 0.8, 0.8, 0.8, 0.4);
         slashArc(p, level, idx, finisher);
+        double gx = p.getX() + flat.x * 3.2 + (-flat.z) * (idx % 2 == 0 ? 0.0 : 0.5);
+        double gz = p.getZ() + flat.z * 3.2 + flat.x * (idx % 2 == 0 ? 0.0 : 0.5);
+        level.sendParticles(groundChips(level, gx, p.getY(), gz), gx, p.getY() + 0.3, gz, finisher ? 120 : 60, 1.4, 0.3, 1.4, 0.3);
+        level.sendParticles(ParticleTypes.EXPLOSION, gx, p.getY() + 0.4, gz, finisher ? 4 : 1, 0.6, 0.2, 0.6, 0);
+        level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, finisher ? 1.8F : 1.1F, finisher ? 0.4F : 0.55F);
         level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.AXE_STRIP, SoundSource.PLAYERS, 1.6F, finisher ? 0.5F : 0.8F);
         level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.5F, 0.6F);
         level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.WOOD_BREAK, SoundSource.PLAYERS, 1.2F, finisher ? 0.5F : 0.9F);
