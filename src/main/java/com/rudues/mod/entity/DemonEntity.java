@@ -24,7 +24,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * The 5-block "Hero of Hell" demon. It is a render/animation avatar that glues itself to the transformed
+ * The 7-block "Hero of Hell" demon. It is a render/animation avatar that glues itself to the transformed
  * player every tick (the player stays the real, controllable entity and keeps the health pool).
  */
 public class DemonEntity extends Entity implements GeoEntity {

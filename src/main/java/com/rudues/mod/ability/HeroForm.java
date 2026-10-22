@@ -650,7 +650,11 @@ public class HeroForm {
         s.grabbed = null;
     }
 
-    /** Places a held victim relative to the demon: forward, sideways (positive = his right hand) and height. */
+    /**
+     * Places a held victim relative to the demon: forward, sideways (positive = the player's right) and height.
+     * GeckoLib mirrors the model's X axis, so the bone named "right_hand" is drawn on the player's LEFT (negative
+     * lateral) and "left_hand" on the player's right (positive lateral).
+     */
     private static void holdTarget(ServerPlayer p, LivingEntity t, Vec3 flat, ServerLevel level, double dist, double lateral, double height) {
         double x = p.getX() + flat.x * dist + (-flat.z) * lateral;
         double y = p.getY() + height;
@@ -738,7 +742,8 @@ public class HeroForm {
                     return;
                 }
                 double rise = Math.min(1.0, s.mTicks / 8.0);
-                holdTarget(p, target, flat, level, 3.4 - 2.0 * rise, 1.0, 3.6 + 3.0 * rise);
+                // held in the "right_hand" claw (drawn on the player's left), lifted overhead as he rises
+                holdTarget(p, target, flat, level, 3.4 - 2.0 * rise, -1.0, 4.2 + 2.8 * rise);
                 s.peakY = Math.max(s.peakY, p.getY());
                 if (s.mTicks % 2 == 0) {
                     level.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), p.getX(), p.getY() + 0.5, p.getZ(), 3, 1.0, 0.3, 1.0, 0.02);
@@ -758,7 +763,7 @@ public class HeroForm {
                 p.fallDistance = 0;
                 if (target != null && target.isAlive()) {
                     double drop = Math.min(1.0, s.mTicks / 6.0);
-                    holdTarget(p, target, flat, level, 1.4 + 2.0 * drop, 1.0, 6.6 - 5.7 * drop);
+                    holdTarget(p, target, flat, level, 1.4 + 2.0 * drop, -1.0, 7.0 - 5.95 * drop);
                 }
                 if (s.mTicks < 4) {
                     p.setDeltaMovement(flat.x * 0.3, -2.8, flat.z * 0.3);
@@ -778,7 +783,8 @@ public class HeroForm {
         Vec3 c = p.position();
         releaseGrab(level, s);
         if (target != null && target.isAlive()) {
-            double gx = c.x + flat.x * 3.4 + (-flat.z) * 1.0, gz = c.z + flat.z * 3.4 + flat.x * 1.0;
+            double lat = -1.0; // under the "right_hand" claw, which is drawn on the player's left
+            double gx = c.x + flat.x * 3.4 + (-flat.z) * lat, gz = c.z + flat.z * 3.4 + flat.x * lat;
             if (target instanceof ServerPlayer tp) {
                 tp.teleportTo(level, gx, c.y, gz, tp.getYRot(), tp.getXRot());
             } else {
@@ -901,7 +907,8 @@ public class HeroForm {
             endMeteor(p, s, level, 10, false);
             return;
         }
-        holdTarget(p, target, flat, level, 3.2, -1.0, 2.6);
+        // gripped in the "left_hand" claw (drawn on the player's right); the axe is in the other hand
+        holdTarget(p, target, flat, level, 3.2, 1.0, 3.2);
         p.fallDistance = 0;
         if (s.mTicks % 3 == 0) {
             level.sendParticles(ModParticles.PURPLE_EMBER.get(), target.getX(), target.getY() + 1.0, target.getZ(), 2, 0.5, 0.6, 0.5, 0.05);

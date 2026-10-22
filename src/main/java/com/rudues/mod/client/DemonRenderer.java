@@ -26,7 +26,7 @@ import java.util.UUID;
 public class DemonRenderer extends GeoEntityRenderer<DemonEntity> {
     public DemonRenderer(EntityRendererProvider.Context context) {
         super(context, new DefaultedEntityGeoModel<>(new ResourceLocation(RuduesMod.MODID, "infernal_titan")));
-        // the titan model is ~5.3 blocks tall at scale 1; DEMON_SCALE makes it stand 7 blocks tall
+        // the titan model is ~5.4 blocks tall at scale 1; DEMON_SCALE makes it stand 7 blocks tall
         withScale(HeroConstants.DEMON_SCALE);
     }
 
