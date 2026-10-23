@@ -14,5 +14,6 @@ public class ModBusEvents {
     public static void onAttributes(EntityAttributeCreationEvent event) {
         event.put(ModEntities.FIEND.get(), FiendEntity.createAttributes().build());
         event.put(ModEntities.INFERNAL_SHADOW.get(), InfernalShadowEntity.createAttributes().build());
+        event.put(ModEntities.INFERNAL_HERO.get(), com.rudues.mod.entity.InfernalHeroEntity.createAttributes().build());
     }
 }

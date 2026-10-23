@@ -23,4 +23,14 @@ public class ModParticles {
     /** tiny glowing ember that drifts upward */
     public static final RegistryObject<SimpleParticleType> PURPLE_EMBER =
             PARTICLES.register("purple_ember", () -> new SimpleParticleType(false));
+
+    // the Infernal Hero's fire: the same flames, a deeper and darker purple than the player's
+    public static final RegistryObject<SimpleParticleType> DARK_FLAME =
+            PARTICLES.register("dark_flame", () -> new SimpleParticleType(false));
+    public static final RegistryObject<SimpleParticleType> DARK_FLAME_BIG =
+            PARTICLES.register("dark_flame_big", () -> new SimpleParticleType(false));
+    public static final RegistryObject<SimpleParticleType> DARK_SPARK =
+            PARTICLES.register("dark_spark", () -> new SimpleParticleType(false));
+    public static final RegistryObject<SimpleParticleType> DARK_EMBER =
+            PARTICLES.register("dark_ember", () -> new SimpleParticleType(false));
 }

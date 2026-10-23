@@ -19,7 +19,16 @@ public class PurpleParticle extends TextureSheetParticle {
 
     protected PurpleParticle(ClientLevel level, double x, double y, double z, double xs, double ys, double zs,
                              SpriteSet sprites, Kind kind) {
+        this(level, x, y, z, xs, ys, zs, sprites, kind, false);
+    }
+
+    /** dark = the Infernal Hero's fire: the sprites tinted a deeper, darker violet */
+    protected PurpleParticle(ClientLevel level, double x, double y, double z, double xs, double ys, double zs,
+                             SpriteSet sprites, Kind kind, boolean dark) {
         super(level, x, y, z);
+        if (dark) {
+            setColor(0.56F, 0.30F, 0.80F);
+        }
         this.sprites = sprites;
         this.kind = kind;
         this.hasPhysics = false;
@@ -99,17 +108,23 @@ public class PurpleParticle extends TextureSheetParticle {
     public static class Provider implements ParticleProvider<SimpleParticleType> {
         private final SpriteSet sprites;
         private final Kind kind;
+        private final boolean dark;
 
         public Provider(SpriteSet sprites, Kind kind) {
+            this(sprites, kind, false);
+        }
+
+        public Provider(SpriteSet sprites, Kind kind, boolean dark) {
             this.sprites = sprites;
             this.kind = kind;
+            this.dark = dark;
         }
 
         @Nullable
         @Override
         public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z,
                                        double xs, double ys, double zs) {
-            return new PurpleParticle(level, x, y, z, xs, ys, zs, sprites, kind);
+            return new PurpleParticle(level, x, y, z, xs, ys, zs, sprites, kind, dark);
         }
     }
 }

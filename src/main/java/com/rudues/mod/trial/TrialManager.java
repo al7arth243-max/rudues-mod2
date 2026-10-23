@@ -412,6 +412,28 @@ public final class TrialManager {
     }
 
     // ------------------------------------------------------------------ commands (operators): testing and recovery
+    /** Test summon: the Infernal Hero 16 blocks in front of the caller, hunting a player (the caller by default) */
+    private static int summonHero(CommandSourceStack src, @Nullable ServerPlayer target) {
+        ServerLevel level = src.getLevel();
+        com.rudues.mod.entity.InfernalHeroEntity hero = ModEntities.INFERNAL_HERO.get().create(level);
+        if (hero == null) {
+            return 0;
+        }
+        Vec3 base = src.getPosition();
+        float yaw = src.getRotation().y;
+        Vec3 pos = base.add(Vec3.directionFromRotation(0, yaw).scale(16.0));
+        hero.moveTo(pos.x, base.y, pos.z, yaw + 180.0F, 0.0F);
+        hero.setYHeadRot(yaw + 180.0F);
+        hero.setYBodyRot(yaw + 180.0F);
+        ServerPlayer hunted = target != null ? target : src.getPlayer();
+        if (hunted != null) {
+            hero.setTarget(hunted);
+        }
+        level.addFreshEntity(hero);
+        src.sendSuccess(() -> Component.literal("Summoned the Infernal Hero" + (hunted != null ? ", hunting " + hunted.getGameProfile().getName() : "") + "."), true);
+        return 1;
+    }
+
     /** Test summon: an Infernal Shadow 8 blocks in front of the caller, copying a player's skin (or the caller's). */
     private static int summonShadow(CommandSourceStack src, @Nullable ServerPlayer copy) {
         ServerLevel level = src.getLevel();
@@ -467,6 +489,10 @@ public final class TrialManager {
                         .executes(ctx -> summonShadow(ctx.getSource(), null))
                         .then(Commands.argument("copy", EntityArgument.player())
                                 .executes(ctx -> summonShadow(ctx.getSource(), EntityArgument.getPlayer(ctx, "copy"))))))
+                .then(Commands.literal("hero").then(Commands.literal("summon")
+                        .executes(ctx -> summonHero(ctx.getSource(), null))
+                        .then(Commands.argument("target", EntityArgument.player())
+                                .executes(ctx -> summonHero(ctx.getSource(), EntityArgument.getPlayer(ctx, "target"))))))
                 .then(Commands.literal("powers").then(Commands.literal("revoke")
                         .then(Commands.argument("player", EntityArgument.player()).executes(ctx -> {
                             ServerPlayer target = EntityArgument.getPlayer(ctx, "player");

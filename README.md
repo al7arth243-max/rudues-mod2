@@ -28,3 +28,22 @@ long between its quick moves.
 All of the Shadow's fire is purple, and what it sets alight burns with purple fire (1 damage a second; water puts it
 out). This fire ignores the power's fire immunity and Fire Resistance. The Shadow's fireballs now count as projectile
 hits rather than fire, so the power no longer shrugs them off either.
+
+Infernal Hero (trial boss, in progress): `/rudues hero summon [player]` (operators) summons it 16 blocks in front of
+you, hunting that player (you by default). It is a darker Titan the size of the Hero of Hell, burning a deeper, darker
+purple than the player's fire - and whoever it hunts is pulled into the Hero of Hell form (it doesn't run out while
+the Hero lives), so the fight is Titan against Titan. Its moves:
+- Hurl: one big dark fireball thrown overhand (bigger, slower and heavier than the Shadow's; it bursts wide).
+- Leap Slash: when you are far away (13+ blocks) it coils, launches itself at you and lands claw-first.
+- Rend: a slash to its left, a slash to its right, then both claws brought down overhead.
+- Hell Beam (30 s cooldown): a long 2.4 s charge, then a 3 s mouth beam that locks on as it fires and then can only
+  drag after you - keep running to either side and it falls behind.
+- Tail Sweep: a hook from the left, a hook from the right, then a full spin whipping its tail through everything near.
+Its animations bend: a two-part spine, a four-link whipping tail, and follow-through on the head, arms, hands and claws.
+At 15% health the end fight begins (it can't be finished off before that, or harmed during it): three clashes, filmed
+like the reference fight - the camera takes over, the bars come down, and you mash the attack button while the fists
+(or beams) are locked to push the bar over to your side.
+1. Fists clash in the middle; win and your punch drives through and shoves it back.
+2. Again, harder: it is launched far across the arena, lands in a skid and rises snarling...
+3. ...into a beam clash. Win and your beam overwhelms its own and it falls.
+Lose a clash and you take the hit and are thrown back; a few seconds later it comes at you again.

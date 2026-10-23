@@ -121,6 +121,9 @@ public class ClientForgeEvents {
         if (mc.player == null || mc.level == null) {
             return;
         }
+        if (ClashClient.cinematicActive()) {
+            return;             // the clash cinematic owns the camera
+        }
         Method move = findCameraMove();
         if (move == null) {
             return;

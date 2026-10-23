@@ -9,7 +9,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class Network {
-    private static final String PROTOCOL = "3";
+    private static final String PROTOCOL = "4";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(RuduesMod.MODID, "main"), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
 
@@ -24,6 +24,12 @@ public class Network {
         CHANNEL.messageBuilder(PurpleFirePacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(PurpleFirePacket::encode).decoder(PurpleFirePacket::decode)
                 .consumerMainThread(PurpleFirePacket::handle).add();
+        CHANNEL.messageBuilder(ClashPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(ClashPacket::encode).decoder(ClashPacket::decode)
+                .consumerMainThread(ClashPacket::handle).add();
+        CHANNEL.messageBuilder(ClashInputPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(ClashInputPacket::encode).decoder(ClashInputPacket::decode)
+                .consumerMainThread(ClashInputPacket::handle).add();
     }
 
     public static void sendState(ServerPlayer player, boolean hasPowers, int gauge, int heroTicks) {

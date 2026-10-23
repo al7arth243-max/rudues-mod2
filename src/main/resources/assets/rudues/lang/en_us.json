@@ -66,5 +66,11 @@
   "entity.rudues.fire_geyser": "Fire Geyser",
   "entity.rudues.shadow_fireball": "Shadow Fireball",
   "death.attack.rudues.shadow_burn": "%1$s was consumed by shadowflame",
-  "death.attack.rudues.shadow_burn.player": "%1$s was consumed by shadowflame whilst fighting %2$s"
+  "death.attack.rudues.shadow_burn.player": "%1$s was consumed by shadowflame whilst fighting %2$s",
+  "entity.rudues.infernal_hero": "Infernal Hero",
+  "entity.rudues.infernal_hero.finale": "Infernal Hero - the last clash",
+  "entity.rudues.hero_fireball": "Infernal Hero's Fireball",
+  "message.rudues.clash": "CLASH!",
+  "message.rudues.clash_beam": "BEAM CLASH!",
+  "message.rudues.clash_mash": "Mash %s!"
 }

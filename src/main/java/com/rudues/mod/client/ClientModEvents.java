@@ -30,6 +30,8 @@ public class ClientModEvents {
         event.registerEntityRenderer(ModEntities.DEMON.get(), DemonRenderer::new);
         event.registerEntityRenderer(ModEntities.BEAM.get(), BeamRenderer::new);
         event.registerEntityRenderer(ModEntities.INFERNAL_SHADOW.get(), InfernalShadowRenderer::new);
+        event.registerEntityRenderer(ModEntities.INFERNAL_HERO.get(), InfernalHeroRenderer::new);
+        event.registerEntityRenderer(ModEntities.HERO_FIREBALL.get(), HeroFireballRenderer::new);
         event.registerEntityRenderer(ModEntities.FIRE_GEYSER.get(), FireGeyserRenderer::new);
         // drawn as a large, full-bright fire charge (plus its flame trail)
         event.registerEntityRenderer(ModEntities.SHADOW_FIREBALL.get(), ShadowFireballRenderer::new);
@@ -41,6 +43,10 @@ public class ClientModEvents {
         event.registerSpriteSet(ModParticles.PURPLE_FLAME_BIG.get(), sprites -> new PurpleParticle.Provider(sprites, PurpleParticle.Kind.FLAME_BIG));
         event.registerSpriteSet(ModParticles.PURPLE_SPARK.get(), sprites -> new PurpleParticle.Provider(sprites, PurpleParticle.Kind.SPARK));
         event.registerSpriteSet(ModParticles.PURPLE_EMBER.get(), sprites -> new PurpleParticle.Provider(sprites, PurpleParticle.Kind.EMBER));
+        event.registerSpriteSet(ModParticles.DARK_FLAME.get(), sprites -> new PurpleParticle.Provider(sprites, PurpleParticle.Kind.FLAME, true));
+        event.registerSpriteSet(ModParticles.DARK_FLAME_BIG.get(), sprites -> new PurpleParticle.Provider(sprites, PurpleParticle.Kind.FLAME_BIG, true));
+        event.registerSpriteSet(ModParticles.DARK_SPARK.get(), sprites -> new PurpleParticle.Provider(sprites, PurpleParticle.Kind.SPARK, true));
+        event.registerSpriteSet(ModParticles.DARK_EMBER.get(), sprites -> new PurpleParticle.Provider(sprites, PurpleParticle.Kind.EMBER, true));
     }
 
     @SubscribeEvent

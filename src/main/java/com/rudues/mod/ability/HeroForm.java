@@ -66,6 +66,8 @@ public class HeroForm {
         double lastX;
         double lastZ;
         ServerBossEvent bar;
+        /** locked in an end-fight clash with the Infernal Hero: no moves, the clash drives the demon */
+        boolean clash;
     }
 
     private static final Map<UUID, State> STATES = new HashMap<>();
@@ -82,7 +84,7 @@ public class HeroForm {
 
     public static boolean canAct(ServerPlayer p) {
         State s = STATES.get(p.getUUID());
-        return s != null && s.phase == 2 && s.busy <= 0;
+        return s != null && s.phase == 2 && s.busy <= 0 && !s.clash;
     }
 
     public static void sync(ServerPlayer p) {
@@ -90,6 +92,55 @@ public class HeroForm {
         int gauge = s == null ? 0 : s.gauge;
         int remaining = (s != null && s.phase == 2) ? Math.max(0, HeroConstants.DEMON_TICKS - s.phaseTicks) : 0;
         Network.sendState(p, PowerData.has(p), gauge, remaining);
+    }
+
+    // ------------------------------------------------------------------ the Infernal Hero's fight
+    /** the Hero fights Titan against Titan: whoever it hunts is pulled into the Hero of Hell form */
+    public static void forceForm(ServerPlayer p) {
+        if (!PowerData.has(p)) {
+            return;
+        }
+        State s = state(p);
+        if (s.phase == 0) {
+            s.gauge = HeroConstants.GAUGE_MAX;
+            startTransformation(p, s);
+            sync(p);
+        }
+    }
+
+    /** while the Hero lives the form doesn't run out (it never drops below 20 s left) */
+    public static void sustain(ServerPlayer p) {
+        State s = STATES.get(p.getUUID());
+        if (s != null && s.phase == 2 && s.phaseTicks > HeroConstants.DEMON_TICKS - 400) {
+            s.phaseTicks = HeroConstants.DEMON_TICKS - 400;
+        }
+    }
+
+    public static void setClash(ServerPlayer p, boolean on) {
+        State s = STATES.get(p.getUUID());
+        if (s == null) {
+            return;
+        }
+        s.clash = on;
+        if (on) {
+            s.attack = null;
+            s.busy = 0;
+            discardBeam(p, s);
+            releaseGrab(p.serverLevel(), s);
+        }
+    }
+
+    public static boolean inClash(net.minecraft.world.entity.player.Player p) {
+        State s = STATES.get(p.getUUID());
+        return s != null && s.clash;
+    }
+
+    /** plays a clip on the player's demon */
+    public static void triggerAvatar(ServerPlayer p, String anim) {
+        State s = STATES.get(p.getUUID());
+        if (s != null) {
+            trigger(p, s, anim);
+        }
     }
 
     // ------------------------------------------------------------------ gauge

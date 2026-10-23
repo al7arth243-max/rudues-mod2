@@ -5,6 +5,8 @@ import com.rudues.mod.entity.FiendEntity;
 import com.rudues.mod.entity.BeamEntity;
 import com.rudues.mod.entity.DemonEntity;
 import com.rudues.mod.entity.InfernalShadowEntity;
+import com.rudues.mod.entity.InfernalHeroEntity;
+import com.rudues.mod.entity.HeroFireballEntity;
 import com.rudues.mod.entity.FireGeyserEntity;
 import com.rudues.mod.entity.ShadowFireballEntity;
 import com.rudues.mod.entity.RageBlastEntity;
@@ -56,6 +58,15 @@ public class ModEntities {
                     .sized(2.8F, 6.5F).fireImmune().clientTrackingRange(10).updateInterval(20)
                     .build("fire_geyser"));
 
+    /** the trial's last boss: the dark Titan */
+    public static final RegistryObject<EntityType<InfernalHeroEntity>> INFERNAL_HERO = ENTITIES.register("infernal_hero",
+            () -> EntityType.Builder.<InfernalHeroEntity>of(InfernalHeroEntity::new, MobCategory.MONSTER)
+                    .sized(4.2F, 7.0F).fireImmune().clientTrackingRange(16).updateInterval(1)
+                    .build("infernal_hero"));
+    public static final RegistryObject<EntityType<HeroFireballEntity>> HERO_FIREBALL = ENTITIES.register("hero_fireball",
+            () -> EntityType.Builder.<HeroFireballEntity>of(HeroFireballEntity::new, MobCategory.MISC)
+                    .sized(1.2F, 1.2F).clientTrackingRange(10).updateInterval(1)
+                    .build("hero_fireball"));
     /** Hellfire Volley fireball */
     public static final RegistryObject<EntityType<ShadowFireballEntity>> SHADOW_FIREBALL = ENTITIES.register("shadow_fireball",
             () -> EntityType.Builder.<ShadowFireballEntity>of(ShadowFireballEntity::new, MobCategory.MISC)

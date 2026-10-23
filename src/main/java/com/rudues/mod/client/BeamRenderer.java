@@ -25,7 +25,7 @@ import java.util.UUID;
 
 /** Draws the beam as three crossed glowing, scrolling planes (outer glow) plus a hot white-purple core. */
 public class BeamRenderer extends EntityRenderer<BeamEntity> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation(RuduesMod.MODID, "textures/entity/purple_beam.png");
+    static final ResourceLocation TEXTURE = new ResourceLocation(RuduesMod.MODID, "textures/entity/purple_beam.png");
 
     public BeamRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -76,7 +76,7 @@ public class BeamRenderer extends EntityRenderer<BeamEntity> {
         poseStack.popPose();
     }
 
-    private static void drawPlanes(PoseStack ps, VertexConsumer vc, float length, float halfWidth, float scroll,
+    static void drawPlanes(PoseStack ps, VertexConsumer vc, float length, float halfWidth, float scroll,
                                    int r, int g, int b, int a) {
         float v1 = scroll + length * 0.5F;
         for (int k = 0; k < 3; k++) {

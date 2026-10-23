@@ -57,6 +57,14 @@ public class DemonEntity extends Entity implements GeoEntity {
     private static final RawAnimation HR_RUSH = RawAnimation.begin().thenPlayAndHold("animation.infernal_titan.hr_rush");
     private static final RawAnimation HR_COMBO = RawAnimation.begin().thenPlay("animation.infernal_titan.hr_combo");
     private static final RawAnimation SLASH = RawAnimation.begin().thenPlay("animation.infernal_titan.slash_combo");
+    // the end fight's clashes with the Infernal Hero
+    private static final RawAnimation CLASH_CHARGE = RawAnimation.begin().thenPlayAndHold("animation.infernal_titan.clash_charge");
+    private static final RawAnimation CLASH_STRAIN = RawAnimation.begin().thenLoop("animation.infernal_titan.clash_strain");
+    private static final RawAnimation CLASH_WIN = RawAnimation.begin().thenPlay("animation.infernal_titan.clash_win");
+    private static final RawAnimation CLASH_LOSE = RawAnimation.begin().thenPlay("animation.infernal_titan.clash_lose");
+    private static final RawAnimation BEAM_CLASH = RawAnimation.begin().thenPlayAndHold("animation.infernal_titan.beam_clash");
+    private static final RawAnimation BEAM_STRAIN = RawAnimation.begin().thenLoop("animation.infernal_titan.beam_strain");
+    private static final RawAnimation BEAM_WIN = RawAnimation.begin().thenPlay("animation.infernal_titan.beam_win");
 
     /** length of the spawn/roar animation in ticks */
     private static final int INTRO_TICKS = 28;
@@ -147,7 +155,14 @@ public class DemonEntity extends Entity implements GeoEntity {
                 .triggerableAnim("tree_combo", TREE_COMBO)
                 .triggerableAnim("tree_miss", TREE_MISS)
                 .triggerableAnim("hr_rush", HR_RUSH)
-                .triggerableAnim("hr_combo", HR_COMBO));
+                .triggerableAnim("hr_combo", HR_COMBO)
+                .triggerableAnim("clash_charge", CLASH_CHARGE)
+                .triggerableAnim("clash_strain", CLASH_STRAIN)
+                .triggerableAnim("clash_win", CLASH_WIN)
+                .triggerableAnim("clash_lose", CLASH_LOSE)
+                .triggerableAnim("beam_clash", BEAM_CLASH)
+                .triggerableAnim("beam_strain", BEAM_STRAIN)
+                .triggerableAnim("beam_win", BEAM_WIN));
     }
 
     private PlayState mainAnimation(AnimationState<DemonEntity> state) {
