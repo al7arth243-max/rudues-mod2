@@ -4,6 +4,9 @@ import com.rudues.mod.RuduesMod;
 import com.rudues.mod.entity.FiendEntity;
 import com.rudues.mod.entity.BeamEntity;
 import com.rudues.mod.entity.DemonEntity;
+import com.rudues.mod.entity.InfernalShadowEntity;
+import com.rudues.mod.entity.FireGeyserEntity;
+import com.rudues.mod.entity.ShadowFireballEntity;
 import com.rudues.mod.entity.RageBlastEntity;
 import com.rudues.mod.entity.WindSlashEntity;
 import net.minecraft.world.entity.EntityType;
@@ -40,4 +43,22 @@ public class ModEntities {
             () -> EntityType.Builder.<BeamEntity>of(BeamEntity::new, MobCategory.MISC)
                     .sized(0.5F, 0.5F).fireImmune().clientTrackingRange(10).updateInterval(1)
                     .build("concentrated_beam"));
+
+    /** the trial's first boss: a dark copy of the chosen player */
+    public static final RegistryObject<EntityType<InfernalShadowEntity>> INFERNAL_SHADOW = ENTITIES.register("infernal_shadow",
+            () -> EntityType.Builder.<InfernalShadowEntity>of(InfernalShadowEntity::new, MobCategory.MONSTER)
+                    .sized(0.6F, 1.8F).fireImmune().clientTrackingRange(10).updateInterval(1)
+                    .build("infernal_shadow"));
+
+    /** Inferno Vortex fire geyser (warning circle, then a column of fire) */
+    public static final RegistryObject<EntityType<FireGeyserEntity>> FIRE_GEYSER = ENTITIES.register("fire_geyser",
+            () -> EntityType.Builder.<FireGeyserEntity>of(FireGeyserEntity::new, MobCategory.MISC)
+                    .sized(2.8F, 6.5F).fireImmune().clientTrackingRange(10).updateInterval(20)
+                    .build("fire_geyser"));
+
+    /** Hellfire Volley fireball */
+    public static final RegistryObject<EntityType<ShadowFireballEntity>> SHADOW_FIREBALL = ENTITIES.register("shadow_fireball",
+            () -> EntityType.Builder.<ShadowFireballEntity>of(ShadowFireballEntity::new, MobCategory.MISC)
+                    .sized(0.6F, 0.6F).clientTrackingRange(8).updateInterval(2)
+                    .build("shadow_fireball"));
 }

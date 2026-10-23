@@ -60,5 +60,11 @@
   "title.rudues.trial_chosen_you": "You have been chosen",
   "title.rudues.trial_chosen": "%s has been chosen",
   "title.rudues.trial_won": "The Trial is Won",
-  "title.rudues.trial_won_sub": "The Fire Fiend's power belongs to %s"
+  "title.rudues.trial_won_sub": "The Fire Fiend's power belongs to %s",
+  "entity.rudues.infernal_shadow": "Infernal Shadow",
+  "entity.rudues.infernal_shadow.of": "Shadow of %s",
+  "entity.rudues.fire_geyser": "Fire Geyser",
+  "entity.rudues.shadow_fireball": "Shadow Fireball",
+  "death.attack.rudues.shadow_burn": "%1$s was consumed by shadowflame",
+  "death.attack.rudues.shadow_burn.player": "%1$s was consumed by shadowflame whilst fighting %2$s"
 }

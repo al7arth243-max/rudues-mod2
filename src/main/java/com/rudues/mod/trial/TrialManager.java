@@ -5,6 +5,8 @@ import com.mojang.logging.LogUtils;
 import com.rudues.mod.RuduesMod;
 import com.rudues.mod.ability.HeroForm;
 import com.rudues.mod.ability.PowerData;
+import com.rudues.mod.entity.InfernalShadowEntity;
+import com.rudues.mod.registry.ModEntities;
 import com.rudues.mod.world.ArenaBuilder;
 import com.rudues.mod.world.ArenaLayout;
 import com.rudues.mod.world.ModDimensions;
@@ -42,6 +44,7 @@ import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
@@ -409,6 +412,29 @@ public final class TrialManager {
     }
 
     // ------------------------------------------------------------------ commands (operators): testing and recovery
+    /** Test summon: an Infernal Shadow 8 blocks in front of the caller, copying a player's skin (or the caller's). */
+    private static int summonShadow(CommandSourceStack src, @Nullable ServerPlayer copy) {
+        ServerLevel level = src.getLevel();
+        InfernalShadowEntity shadow = ModEntities.INFERNAL_SHADOW.get().create(level);
+        if (shadow == null) {
+            return 0;
+        }
+        Vec3 at = src.getPosition();
+        float yaw = src.getRotation().y;
+        Vec3 look = Vec3.directionFromRotation(0, yaw);
+        Vec3 pos = at.add(look.scale(8.0));
+        BlockPos ground = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, BlockPos.containing(pos));
+        double y = Math.abs(ground.getY() - at.y) < 6 ? ground.getY() : at.y;
+        shadow.moveTo(pos.x, y, pos.z, yaw + 180.0F, 0.0F);
+        shadow.setYHeadRot(yaw + 180.0F);
+        shadow.setYBodyRot(yaw + 180.0F);
+        Player skin = copy != null ? copy : (src.getEntity() instanceof Player p ? p : null);
+        shadow.setCopyOf(skin);
+        level.addFreshEntity(shadow);
+        src.sendSuccess(() -> Component.literal("Summoned an Infernal Shadow" + (skin != null ? " of " + skin.getGameProfile().getName() : "") + "."), true);
+        return 1;
+    }
+
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
@@ -437,6 +463,10 @@ public final class TrialManager {
                     ctx.getSource().sendSuccess(() -> Component.literal("Rebuilt the arena (" + n + " blocks)."), true);
                     return 1;
                 })))
+                .then(Commands.literal("shadow").then(Commands.literal("summon")
+                        .executes(ctx -> summonShadow(ctx.getSource(), null))
+                        .then(Commands.argument("copy", EntityArgument.player())
+                                .executes(ctx -> summonShadow(ctx.getSource(), EntityArgument.getPlayer(ctx, "copy"))))))
                 .then(Commands.literal("powers").then(Commands.literal("revoke")
                         .then(Commands.argument("player", EntityArgument.player()).executes(ctx -> {
                             ServerPlayer target = EntityArgument.getPlayer(ctx, "player");

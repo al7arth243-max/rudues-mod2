@@ -29,6 +29,10 @@ public class ClientModEvents {
         event.registerEntityRenderer(ModEntities.FIEND.get(), FiendRenderer::new);
         event.registerEntityRenderer(ModEntities.DEMON.get(), DemonRenderer::new);
         event.registerEntityRenderer(ModEntities.BEAM.get(), BeamRenderer::new);
+        event.registerEntityRenderer(ModEntities.INFERNAL_SHADOW.get(), InfernalShadowRenderer::new);
+        event.registerEntityRenderer(ModEntities.FIRE_GEYSER.get(), FireGeyserRenderer::new);
+        // drawn as a large, full-bright fire charge (plus its flame trail)
+        event.registerEntityRenderer(ModEntities.SHADOW_FIREBALL.get(), ShadowFireballRenderer::new);
     }
 
     @SubscribeEvent
