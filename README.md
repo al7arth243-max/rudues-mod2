@@ -49,7 +49,8 @@ the Hero lives), so the fight is Titan against Titan. Its moves:
 Its animations bend: a two-part spine, a four-link whipping tail, and follow-through on the head, arms, hands and claws.
 At 15% health the end fight begins (it can't be finished off before that, or harmed during it): three clashes, filmed
 like the reference fight - the camera takes over, the bars come down, and you mash the attack button while the fists
-(or beams) are locked to push the bar over to your side.
+(or beams) are locked: push the gauge above the line (85%) and keep it there for 1.5 s to win the clash (if time runs
+out, you win if it is above the line). The Infernal Hero has 4000 health.
 1. Fists clash in the middle; win and your punch drives through and shoves it back.
 2. Again, harder: it is launched far across the arena, lands in a skid and rises snarling...
 3. ...into a beam clash. Win and your beam overwhelms its own and it falls.

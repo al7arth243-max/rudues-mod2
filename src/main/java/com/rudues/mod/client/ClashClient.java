@@ -402,6 +402,16 @@ public final class ClashClient {
             g.fill(0, 0, w, h, (a << 24) | 0xF0E0FF);
         }
         float t = time(s, pt);
+        if (s.phase == ClashScript.PH_RESOLVE && t < 40) {
+            boolean won = s.result == ClashScript.RESULT_WIN;
+            Component banner = Component.translatable(won ? "message.rudues.clash_won" : "message.rudues.clash_lost");
+            PoseStack bp = g.pose();
+            bp.pushPose();
+            bp.translate(w / 2.0F, h * 0.22F, 0);
+            bp.scale(2.5F, 2.5F, 1.0F);
+            g.drawString(mc.font, banner, -mc.font.width(banner) / 2, 0, won ? 0xE6C8FF : 0xFF6A5A, true);
+            bp.popPose();
+        }
         if (s.phase != ClashScript.PH_STRAIN || t < ClashScript.PROMPT_DELAY) {
             return;
         }
@@ -415,14 +425,29 @@ public final class ClashClient {
         }
         ring(g, cx, cy, 20, 0xFFF2C0, 255);
         ring(g, cx, cy, 17, 0xFFF2C0, 160);
+        // holding above the line fills the centre ring; full = the clash is won
+        float hold = Mth.clamp(s.hold, 0, 1);
+        if (hold > 0.0F) {
+            int n = 64;
+            for (int i = 0; i < (int) (n * hold); i++) {
+                double a = -Math.PI / 2 + Math.PI * 2 * i / n;
+                for (float rr = 21.5F; rr <= 25.5F; rr += 1.0F) {
+                    int x = cx + (int) Math.round(Math.cos(a) * rr), y = cy + (int) Math.round(Math.sin(a) * rr);
+                    g.fill(x - 1, y - 1, x + 1, y + 1, 0xFFC08CFF);
+                }
+            }
+        }
         PoseStack ps = g.pose();
         ps.pushPose();
         ps.translate(cx, cy - 52, 0);
         ps.scale(2.0F, 2.0F, 1.0F);
-        Component title = Component.translatable(s.stage == ClashScript.STAGE_BEAM ? "message.rudues.clash_beam" : "message.rudues.clash");
+        Component title = Component.translatable(s.stage == ClashScript.STAGE_BEAM ? "message.rudues.clash_beam" : "message.rudues.clash", s.stage + 1);
         g.drawString(mc.font, title, -mc.font.width(title) / 2, 0, 0xFFE9B0, true);
         ps.popPose();
-        Component mash = Component.translatable("message.rudues.clash_mash", mc.options.keyAttack.getTranslatedKeyMessage());
+        Float shownB = SHOWN_BALANCE.get(s.heroId);
+        boolean above = (shownB == null ? s.balance : shownB) >= ClashScript.WIN_LINE;
+        Component mash = above ? Component.translatable("message.rudues.clash_hold")
+                : Component.translatable("message.rudues.clash_mash", mc.options.keyAttack.getTranslatedKeyMessage());
         boolean blink = ((int) (now / 3)) % 2 == 0;
         g.drawString(mc.font, mash, cx - mc.font.width(mash) / 2, cy + 34, blink ? 0xFFFFFF : 0xFFD27A, true);
         // the tug of war: your purple against its darker purple
@@ -434,6 +459,12 @@ public final class ClashClient {
         g.fill(bx, by, split, by + 6, 0xFFA846FF);
         g.fill(split, by, bx + bw, by + 6, 0xFF4E1290);
         g.fill(split - 1, by - 3, split + 1, by + 9, 0xFFFFFFFF);
+        // the line to keep it above
+        int line = bx + (int) (bw * ClashScript.WIN_LINE);
+        g.fill(line, by - 5, line + 1, by + 11, 0xFFFFE9B0);
+        if (b >= ClashScript.WIN_LINE) {
+            g.fill(line + 1, by, split - 1, by + 6, 0xFFD8A8FF);
+        }
         float left = 1.0F - t / ClashScript.strainTicks(s.stage);
         g.fill(bx, by + 10, bx + (int) (bw * Mth.clamp(left, 0, 1)), by + 11, 0x90FFE9B0);
     }

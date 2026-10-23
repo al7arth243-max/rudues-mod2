@@ -23,7 +23,10 @@ public final class ClashScript {
     public static final int RESULT_NONE = 0, RESULT_WIN = 1, RESULT_LOSE = 2;
 
     /** the QTE: how long it may last, how fast the Hero pushes back, what one press is worth */
-    public static final int STRAIN_TICKS_PUNCH = 90, STRAIN_TICKS_BEAM = 110;
+    public static final int STRAIN_TICKS_PUNCH = 130, STRAIN_TICKS_BEAM = 150;
+    /** to win: push the gauge above this line and keep it there for HOLD_TICKS (or be above it when time runs out) */
+    public static final float WIN_LINE = 0.85F;
+    public static final int HOLD_TICKS = 30;
     public static final float DECAY_PUNCH = 0.0065F, DECAY_BEAM = 0.0080F;
     public static final float PRESS_PUNCH = 0.045F, PRESS_BEAM = 0.040F;
     /** a pause after contact before the prompt appears and presses count */

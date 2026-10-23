@@ -15,10 +15,10 @@ public class ClashPacket {
     public final int stage, phase, result;
     public final long start;
     public final double ox, oy, oz;
-    public final float yaw, dHero, dPlayer, balance;
+    public final float yaw, dHero, dPlayer, balance, hold;
 
     public ClashPacket(int heroId, int playerId, boolean active, int stage, int phase, int result, long start,
-                       double ox, double oy, double oz, float yaw, float dHero, float dPlayer, float balance) {
+                       double ox, double oy, double oz, float yaw, float dHero, float dPlayer, float balance, float hold) {
         this.heroId = heroId;
         this.playerId = playerId;
         this.active = active;
@@ -33,6 +33,7 @@ public class ClashPacket {
         this.dHero = dHero;
         this.dPlayer = dPlayer;
         this.balance = balance;
+        this.hold = hold;
     }
 
     public static void encode(ClashPacket m, FriendlyByteBuf buf) {
@@ -50,12 +51,13 @@ public class ClashPacket {
         buf.writeFloat(m.dHero);
         buf.writeFloat(m.dPlayer);
         buf.writeFloat(m.balance);
+        buf.writeFloat(m.hold);
     }
 
     public static ClashPacket decode(FriendlyByteBuf buf) {
         return new ClashPacket(buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readByte(), buf.readByte(), buf.readByte(),
                 buf.readLong(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
-                buf.readFloat());
+                buf.readFloat(), buf.readFloat());
     }
 
     public static void handle(ClashPacket msg, Supplier<NetworkEvent.Context> ctx) {

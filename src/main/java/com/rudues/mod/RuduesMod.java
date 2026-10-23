@@ -31,5 +31,29 @@ public class RuduesMod {
 
     private void commonSetup(final FMLCommonSetupEvent event) {
         event.enqueueWork(Network::register);
+        event.enqueueWork(RuduesMod::raiseHealthCap);
+    }
+
+    /**
+     * Vanilla caps every mob's max health at 1024; the Infernal Hero has 4000. Lift the cap (the attribute's maximum
+     * is a final double field holding 1024 - found by value, so it works with any mappings). If this ever fails the
+     * Hero scales the damage it takes instead, so it still takes 4000 health's worth to beat.
+     */
+    private static void raiseHealthCap() {
+        if (!(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH instanceof net.minecraft.world.entity.ai.attributes.RangedAttribute ra)) {
+            return;
+        }
+        try {
+            for (java.lang.reflect.Field f : net.minecraft.world.entity.ai.attributes.RangedAttribute.class.getDeclaredFields()) {
+                if (f.getType() == double.class && !java.lang.reflect.Modifier.isStatic(f.getModifiers())) {
+                    f.setAccessible(true);
+                    if (f.getDouble(ra) == 1024.0D) {
+                        f.setDouble(ra, 1000000.0D);
+                    }
+                }
+            }
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            // the damage scaling in InfernalHeroEntity covers it
+        }
     }
 }

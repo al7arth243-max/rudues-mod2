@@ -87,6 +87,7 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
     private static final int BEAM_COOLDOWN = 20 * 30;
     /** the end fight begins at this much health */
     public static final float FINALE_AT = 0.15F;
+    public static final double MAX_HEALTH = 4000.0;
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private final ServerBossEvent bossBar = new ServerBossEvent(Component.translatable("entity.rudues.infernal_hero"),
@@ -115,6 +116,8 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
     private float axisYaw;
     private float dHero, dPlayer;
     private float balance = 0.5F;
+    /** ticks the gauge has been held above the win line */
+    private int hold;
     private int pressesThisTick;
 
     public InfernalHeroEntity(EntityType<? extends InfernalHeroEntity> type, Level level) {
@@ -126,7 +129,7 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 700.0D)
+                .add(Attributes.MAX_HEALTH, MAX_HEALTH)
                 .add(Attributes.ARMOR, 10.0D)
                 .add(Attributes.ATTACK_DAMAGE, 14.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.30D)
@@ -792,6 +795,7 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
         stage = newStage;
         result = ClashScript.RESULT_NONE;
         balance = 0.5F;
+        hold = 0;
         Vec3 hp = position(), pp = p.position();
         Vec3 u = pp.subtract(hp).multiply(1, 0, 1);
         if (u.lengthSqr() < 1e-4) {
@@ -836,7 +840,7 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
     private void sendClash(boolean active) {
         ServerPlayer p = clashPlayer();
         ClashPacket pkt = new ClashPacket(getId(), p != null ? p.getId() : -1, active, stage, phase, result, phaseStart,
-                origin.x, origin.y, origin.z, axisYaw, dHero, dPlayer, balance);
+                origin.x, origin.y, origin.z, axisYaw, dHero, dPlayer, balance, hold / (float) ClashScript.HOLD_TICKS);
         Network.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> this), pkt);
         if (p != null) {
             Network.CHANNEL.send(PacketDistributor.PLAYER.with(() -> p), pkt);
@@ -916,10 +920,16 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
                 if (t % 10 == 0) {
                     playSound(stage == ClashScript.STAGE_BEAM ? SoundEvents.BEACON_AMBIENT : SoundEvents.ANVIL_PLACE, 1.5F, 0.5F);
                 }
-                if (balance >= 1.0F) {
+                // won by holding the gauge above the line long enough (a dip below costs some of the hold, not all)
+                if (t >= ClashScript.PROMPT_DELAY) {
+                    hold = balance >= ClashScript.WIN_LINE ? hold + 1 : Math.max(0, hold - 3);
+                }
+                if (hold >= ClashScript.HOLD_TICKS) {
                     resolve(ClashScript.RESULT_WIN);
-                } else if (balance <= 0.0F || t >= ClashScript.strainTicks(stage)) {
-                    resolve(ClashScript.RESULT_LOSE);
+                } else if (t >= ClashScript.strainTicks(stage)) {
+                    resolve(balance >= ClashScript.WIN_LINE ? ClashScript.RESULT_WIN : ClashScript.RESULT_LOSE);
+                } else if (balance <= 0.0F) {
+                    resolve(ClashScript.RESULT_LOSE);       // overpowered
                 }
             }
             case ClashScript.PH_RESOLVE -> {
@@ -1014,6 +1024,9 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
     public boolean hurt(DamageSource source, float amount) {
         if (finale && !finaleKill && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
             return false;
+        }
+        if (getMaxHealth() < MAX_HEALTH - 1.0) {
+            amount *= (float) (getMaxHealth() / MAX_HEALTH);     // the health cap couldn't be lifted: same fight length
         }
         if (!finaleKill && !level().isClientSide && getTarget() instanceof ServerPlayer sp && HeroForm.empowered(sp)) {
             // it can't be finished off by plain damage: at 15% the end fight takes over
