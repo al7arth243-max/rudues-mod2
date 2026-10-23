@@ -32,7 +32,7 @@ public class AbilityHandler {
 
     public static void tryCast(ServerPlayer player, int index) {
         AbilityType type = AbilityType.byIndex(index);
-        if (type == null || !PowerData.has(player)) {
+        if (type == null || !HeroForm.empowered(player)) {
             return;
         }
         // base moves only outside Hero of Hell, hero moves only during it

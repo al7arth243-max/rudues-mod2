@@ -74,6 +74,13 @@ public final class TrialManager {
     private static final String KEPT_INVENTORY = "rudues_trial_inventory";
     private static final double WALL_R = ArenaLayout.FIRE_R + 1.0;
 
+    /** the fight: the Shadow rises, is beaten, the Hero rises, is beaten */
+    public static final int STAGE_SHADOW_RISING = 1, STAGE_SHADOW = 2, STAGE_HERO_RISING = 3, STAGE_HERO = 4;
+    /** the Infernal Shadow rises 5 s after the trial begins (once the title has played) */
+    public static final int SHADOW_DELAY = 100;
+    /** the Infernal Hero rises 8 s after the Shadow falls */
+    public static final int HERO_DELAY = 160;
+
     private static final List<Runnable> PENDING = new ArrayList<>();
     private static final Set<UUID> ENTERING = new HashSet<>();
 
@@ -168,7 +175,174 @@ public final class TrialManager {
                             .withStyle(ChatFormatting.LIGHT_PURPLE));
         }
         trial.playSound(null, chosen.blockPosition(), SoundEvents.WITHER_SPAWN, SoundSource.HOSTILE, 1.0F, 0.6F);
-        // The Infernal Shadow is summoned here once the boss is in place (next step).
+        d.stage = STAGE_SHADOW_RISING;
+        d.timer = SHADOW_DELAY;
+        d.setDirty();
+    }
+
+    // ------------------------------------------------------------------ the bosses
+    private static Vec3 arenaCentre(ServerLevel trial) {
+        return new Vec3(0.5, ArenaLayout.FLOOR + 1, 0.5);
+    }
+
+    private static float yawToward(Vec3 from, @Nullable Entity to) {
+        if (to == null) {
+            return 0.0F;
+        }
+        return (float) (Math.atan2(to.getZ() - from.z, to.getX() - from.x) * (180.0 / Math.PI)) - 90.0F;
+    }
+
+    /** the trial's clock: raises each boss in turn, and keeps one standing if it is ever lost (unloaded, removed) */
+    private static void tickTrial(MinecraftServer server) {
+        TrialData d = TrialData.get(server);
+        if (!d.active || d.chosen == null) {
+            return;
+        }
+        ServerLevel trial = trialLevel(server);
+        ServerPlayer chosen = server.getPlayerList().getPlayer(d.chosen);
+        if (trial == null || chosen == null || !inTrial(chosen)) {
+            return;
+        }
+        Vec3 c = arenaCentre(trial);
+        switch (d.stage) {
+            case STAGE_SHADOW_RISING, STAGE_HERO_RISING -> {
+                boolean hero = d.stage == STAGE_HERO_RISING;
+                // flames gather at the centre while it rises
+                if (d.timer % 4 == 0) {
+                    trial.sendParticles(hero ? com.rudues.mod.registry.ModParticles.DARK_FLAME_BIG.get() : com.rudues.mod.registry.ModParticles.PURPLE_FLAME_BIG.get(),
+                            c.x, c.y + 0.5, c.z, hero ? 10 : 5, hero ? 2.0 : 0.6, 0.4, hero ? 2.0 : 0.6, 0.05);
+                }
+                if (d.timer == 40) {
+                    trial.playSound(null, c.x, c.y, c.z, hero ? SoundEvents.ENDER_DRAGON_GROWL : SoundEvents.WITHER_AMBIENT, SoundSource.HOSTILE, 3.0F, 0.5F);
+                }
+                if (--d.timer <= 0) {
+                    if (hero) {
+                        spawnHero(trial, chosen, d);
+                    } else {
+                        spawnShadow(trial, chosen, d);
+                    }
+                }
+                d.setDirty();
+            }
+            case STAGE_SHADOW, STAGE_HERO -> {
+                if (chosen.tickCount % 40 == 0 && (d.boss == null || trial.getEntity(d.boss) == null)) {
+                    // the boss is gone without falling: it rises again
+                    d.stage = d.stage == STAGE_SHADOW ? STAGE_SHADOW_RISING : STAGE_HERO_RISING;
+                    d.timer = 40;
+                    d.setDirty();
+                }
+            }
+            default -> {
+            }
+        }
+    }
+
+    private static void spawnShadow(ServerLevel trial, ServerPlayer chosen, TrialData d) {
+        InfernalShadowEntity shadow = ModEntities.INFERNAL_SHADOW.get().create(trial);
+        if (shadow == null) {
+            return;
+        }
+        Vec3 c = arenaCentre(trial);
+        float yaw = yawToward(c, chosen);
+        shadow.moveTo(c.x, c.y, c.z, yaw, 0.0F);
+        shadow.setYHeadRot(yaw);
+        shadow.setYBodyRot(yaw);
+        shadow.setCopyOf(chosen);
+        shadow.setTarget(chosen);
+        d.boss = shadow.getUUID();          // first, so the join check lets it in
+        trial.addFreshEntity(shadow);
+        d.stage = STAGE_SHADOW;
+        d.setDirty();
+        trial.sendParticles(com.rudues.mod.registry.ModParticles.PURPLE_FLAME_BIG.get(), c.x, c.y + 1, c.z, 60, 0.8, 1.2, 0.8, 0.1);
+        trial.playSound(null, c.x, c.y, c.z, SoundEvents.WITHER_SPAWN, SoundSource.HOSTILE, 1.5F, 0.8F);
+        for (ServerPlayer p : trial.players()) {
+            title(p, Component.translatable("entity.rudues.infernal_shadow").withStyle(ChatFormatting.DARK_PURPLE),
+                    Component.translatable("title.rudues.shadow_sub", chosen.getGameProfile().getName()).withStyle(ChatFormatting.LIGHT_PURPLE));
+        }
+    }
+
+    private static void spawnHero(ServerLevel trial, ServerPlayer chosen, TrialData d) {
+        com.rudues.mod.entity.InfernalHeroEntity hero = ModEntities.INFERNAL_HERO.get().create(trial);
+        if (hero == null) {
+            return;
+        }
+        Vec3 c = arenaCentre(trial);
+        float yaw = yawToward(c, chosen);
+        hero.moveTo(c.x, c.y, c.z, yaw, 0.0F);
+        hero.setYHeadRot(yaw);
+        hero.setYBodyRot(yaw);
+        hero.setTarget(chosen);
+        d.boss = hero.getUUID();
+        trial.addFreshEntity(hero);
+        d.stage = STAGE_HERO;
+        d.setDirty();
+        // Titan against Titan: the chosen one is pulled into the Hero of Hell form for this fight
+        HeroForm.forceForm(chosen);
+        trial.sendParticles(com.rudues.mod.registry.ModParticles.DARK_FLAME_BIG.get(), c.x, c.y + 3, c.z, 120, 2.5, 3.5, 2.5, 0.12);
+        trial.sendParticles(net.minecraft.core.particles.ParticleTypes.EXPLOSION_EMITTER, c.x, c.y + 1, c.z, 2, 1, 1, 1, 0);
+        trial.playSound(null, c.x, c.y, c.z, SoundEvents.ENDER_DRAGON_GROWL, SoundSource.HOSTILE, 4.0F, 0.45F);
+        for (ServerPlayer p : trial.players()) {
+            title(p, Component.translatable("entity.rudues.infernal_hero").withStyle(ChatFormatting.DARK_PURPLE),
+                    Component.translatable("title.rudues.hero_sub").withStyle(ChatFormatting.LIGHT_PURPLE));
+        }
+    }
+
+    /** the chosen one, while the Infernal Hero is fought: they wield the Hero of Hell form before they own the power */
+    public static boolean heroGranted(ServerPlayer p) {
+        MinecraftServer server = p.getServer();
+        if (server == null) {
+            return false;
+        }
+        TrialData d = TrialData.get(server);
+        return d.active && p.getUUID().equals(d.chosen) && d.stage >= STAGE_HERO_RISING && inTrial(p);
+    }
+
+    /** a boss fell: the Shadow hands over to the Hero, the Hero ends the trial */
+    @SubscribeEvent
+    public static void onBossDeath(LivingDeathEvent event) {
+        Entity e = event.getEntity();
+        if (e.level().isClientSide || !inTrial(e) || e.getServer() == null) {
+            return;
+        }
+        TrialData d = TrialData.get(e.getServer());
+        if (!d.active || d.boss == null || !d.boss.equals(e.getUUID())) {
+            return;
+        }
+        MinecraftServer server = e.getServer();
+        if (e instanceof InfernalShadowEntity && d.stage == STAGE_SHADOW) {
+            d.stage = STAGE_HERO_RISING;
+            d.timer = HERO_DELAY;
+            d.boss = null;
+            d.setDirty();
+            for (ServerPlayer p : trialLevel(server).players()) {
+                p.displayClientMessage(Component.translatable("message.rudues.shadow_fallen").withStyle(ChatFormatting.DARK_PURPLE), false);
+            }
+        } else if (e instanceof com.rudues.mod.entity.InfernalHeroEntity && d.stage == STAGE_HERO) {
+            later(() -> complete(server));
+        }
+    }
+
+    /** bosses from a trial that is no longer being fought (a restart, a lost trial) don't come back */
+    @SubscribeEvent
+    public static void onJoin(net.minecraftforge.event.entity.EntityJoinLevelEvent event) {
+        Entity e = event.getEntity();
+        if (event.getLevel().isClientSide() || !isTrialLevel(event.getLevel())
+                || !(e instanceof InfernalShadowEntity || e instanceof com.rudues.mod.entity.InfernalHeroEntity) || e.getServer() == null) {
+            return;
+        }
+        TrialData d = TrialData.get(e.getServer());
+        if (!d.active || d.boss == null || !d.boss.equals(e.getUUID())) {
+            event.setCanceled(true);
+        }
+    }
+
+    private static void clearBosses(ServerLevel trial) {
+        for (Entity e : new ArrayList<Entity>(trial.getEntities(null, new net.minecraft.world.phys.AABB(-200, -64, -200, 200, 400, 200),
+                x -> x instanceof InfernalShadowEntity || x instanceof com.rudues.mod.entity.InfernalHeroEntity
+                        || x instanceof com.rudues.mod.entity.FireGeyserEntity || x instanceof com.rudues.mod.entity.ShadowFireballEntity
+                        || x instanceof com.rudues.mod.entity.HeroFireballEntity))) {
+            e.discard();
+        }
     }
 
     /** The chosen one fell or fled: everyone is sent back and the arena resets. */
@@ -177,8 +351,16 @@ public final class TrialManager {
         if (!d.active) {
             return;
         }
+        UUID chosenId = d.chosen;
         d.end();
         ServerLevel trial = trialLevel(server);
+        clearBosses(trial);
+        // the borrowed Hero of Hell form goes with the trial
+        ServerPlayer chosen = chosenId == null ? null : server.getPlayerList().getPlayer(chosenId);
+        if (chosen != null && !PowerData.has(chosen)) {
+            HeroForm.cleanup(chosen);
+            HeroForm.sync(chosen);
+        }
         for (ServerPlayer p : new ArrayList<>(trial.players())) {
             p.displayClientMessage(reason, false);
             if (p.isAlive()) {
@@ -198,6 +380,7 @@ public final class TrialManager {
         UUID chosenId = d.chosen;
         ServerPlayer chosen = server.getPlayerList().getPlayer(chosenId);
         d.end();
+        clearBosses(trialLevel(server));
         d.holder = chosenId;
         d.setDirty();
         if (chosen != null) {
@@ -249,6 +432,7 @@ public final class TrialManager {
         if (event.phase != TickEvent.Phase.END) {
             return;
         }
+        tickTrial(event.getServer());
         List<Runnable> run;
         synchronized (PENDING) {
             if (PENDING.isEmpty()) {

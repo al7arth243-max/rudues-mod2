@@ -7,6 +7,7 @@ import com.rudues.mod.registry.ModEntities;
 import com.rudues.mod.registry.ModParticles;
 import com.rudues.mod.registry.ModItems;
 import com.rudues.mod.registry.ModBlocks;
+import com.rudues.mod.registry.ModSounds;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -23,6 +24,7 @@ public class RuduesMod {
         ModEntities.ENTITIES.register(bus);
         ModEffects.EFFECTS.register(bus);
         ModParticles.PARTICLES.register(bus);
+        ModSounds.SOUNDS.register(bus);
         ModCreativeTabs.TABS.register(bus);
         bus.addListener(this::commonSetup);
     }

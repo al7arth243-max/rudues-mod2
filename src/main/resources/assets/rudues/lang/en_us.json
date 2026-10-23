@@ -72,5 +72,9 @@
   "entity.rudues.hero_fireball": "Infernal Hero's Fireball",
   "message.rudues.clash": "CLASH!",
   "message.rudues.clash_beam": "BEAM CLASH!",
-  "message.rudues.clash_mash": "Mash %s!"
+  "message.rudues.clash_mash": "Mash %s!",
+  "title.rudues.shadow_sub": "%s's darkness takes shape",
+  "title.rudues.hero_sub": "Rise, Hero of Hell",
+  "message.rudues.shadow_fallen": "The Shadow falls... and something far worse stirs at the heart of the arena.",
+  "subtitles.rudues.music": "Boss theme"
 }

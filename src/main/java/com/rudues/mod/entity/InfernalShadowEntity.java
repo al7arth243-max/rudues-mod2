@@ -136,6 +136,8 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
     private static final float PHASE_TWO_POWER = 1.2F;
     private static final double PHASE_TWO_SPEED = 0.15;
     private static final UUID PHASE_SPEED_ID = UUID.fromString("5d0c3c8e-6a39-4f7e-9d0b-2f61a7c4e2b1");
+    private static final UUID SHED_ARMOR_ID = UUID.fromString("8a51c3e2-7f0b-4d1e-9c55-1b2f6e0d7a41");
+    private static final UUID SHED_TOUGH_ID = UUID.fromString("c4e9a7d0-2b3f-4a6c-8e1d-5f7b9a0c3e62");
     public static final float SHOCKWAVE_DAMAGE = 4.0F;
     public static final double SHOCKWAVE_RADIUS = 7.0;
 
@@ -1055,7 +1057,10 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
         }
         if (t >= nextGeyser && t <= VortexShape.GEYSERS_TO) {
             spawnGeyser();
-            nextGeyser = t + 7 + random.nextInt(6);
+            if (random.nextFloat() < 0.35F) {
+                spawnGeyser();                      // often two at once
+            }
+            nextGeyser = t + 3 + random.nextInt(4);
         }
         if (t == VortexShape.COLLAPSE_TICK) {
             triggerAnim("main", "vortex_end");
@@ -1070,12 +1075,14 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
         Vec3 at = null;
         List<Player> players = level().getEntitiesOfClass(Player.class, getBoundingBox().inflate(40, 16, 40),
                 p -> p.isAlive() && !p.isSpectator() && !p.isCreative());
-        if (!players.isEmpty() && random.nextFloat() < 0.4F) {
+        if (!players.isEmpty() && random.nextFloat() < 0.55F) {
             Player p = players.get(random.nextInt(players.size()));
-            at = p.position().add((random.nextDouble() - 0.5) * 1.5, 0, (random.nextDouble() - 0.5) * 1.5);
+            // right under them, or where they are running to (so running in a straight line isn't safe either)
+            Vec3 lead = random.nextBoolean() ? p.getDeltaMovement().multiply(1, 0, 1).scale(14.0) : Vec3.ZERO;
+            at = p.position().add(lead).add((random.nextDouble() - 0.5) * 2.0, 0, (random.nextDouble() - 0.5) * 2.0);
         }
         for (int tries = 0; at == null && tries < 8; tries++) {
-            double a = random.nextDouble() * Math.PI * 2, r = 5.0 + random.nextDouble() * 23.0;
+            double a = random.nextDouble() * Math.PI * 2, r = 5.0 + random.nextDouble() * 27.0;
             at = c.add(Math.cos(a) * r, 0, Math.sin(a) * r);
         }
         double dx = at.x - c.x, dz = at.z - c.z;
@@ -1515,6 +1522,9 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
         if (t == PhaseMoveData.ARM_TICK || t == PhaseMoveData.LEGS_TICK) {
             playSound(SoundEvents.ANVIL_DESTROY, 1.0F, 0.6F);
         }
+        if (t == PhaseMoveData.LEGS_TICK) {
+            shedArmor(sl);
+        }
         if (t == PhaseMoveData.ROAR_TICK) {
             shockwave(sl);
         }
@@ -1529,6 +1539,33 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
             }
         }
         shiftTick++;
+    }
+
+    /**
+     * The rest of the netherite bursts off - from here it is the player's own skin, darkened, with the corruption -
+     * but it keeps a full netherite set's protection (20 armour, 12 toughness) in its hide.
+     */
+    private void shedArmor(ServerLevel sl) {
+        for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+            if (!getItemBySlot(slot).isEmpty()) {
+                setItemSlot(slot, ItemStack.EMPTY);
+            }
+        }
+        armourBurst(sl, local(0.0, 0.0, 1.75));       // the helmet
+        armourBurst(sl, local(0.0, 0.0, 1.15));       // the chestplate
+        armourBurst(sl, local(0.0, 0.37, 1.2));       // its right arm
+        keepNetheriteProtection();
+    }
+
+    private void keepNetheriteProtection() {
+        AttributeInstance armor = getAttribute(Attributes.ARMOR);
+        if (armor != null && armor.getModifier(SHED_ARMOR_ID) == null) {
+            armor.addPermanentModifier(new AttributeModifier(SHED_ARMOR_ID, "Infernal Shadow hide", 20.0, AttributeModifier.Operation.ADDITION));
+        }
+        AttributeInstance tough = getAttribute(Attributes.ARMOR_TOUGHNESS);
+        if (tough != null && tough.getModifier(SHED_TOUGH_ID) == null) {
+            tough.addPermanentModifier(new AttributeModifier(SHED_TOUGH_ID, "Infernal Shadow hide", 12.0, AttributeModifier.Operation.ADDITION));
+        }
     }
 
     /** netherite shards and purple fire bursting off a limb */
@@ -1759,6 +1796,12 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
         }
         if (tag.contains("Phase")) {
             this.entityData.set(PHASE, Math.max(1, tag.getInt("Phase")));
+        }
+        if (isPhaseTwo()) {
+            for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+                setItemSlot(slot, ItemStack.EMPTY);
+            }
+            keepNetheriteProtection();
         }
         if (tag.contains("HomeX")) {
             homePos = new Vec3(tag.getDouble("HomeX"), tag.getDouble("HomeY"), tag.getDouble("HomeZ"));

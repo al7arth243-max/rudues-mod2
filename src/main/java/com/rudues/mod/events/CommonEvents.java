@@ -30,6 +30,9 @@ public class CommonEvents {
             return;
         }
         if (!PowerData.has(sp)) {
+            if (HeroForm.empowered(sp)) {
+                HeroForm.tick(sp);          // the Hero of Hell form borrowed for the trial's last fight
+            }
             return;
         }
         if (sp.isOnFire()) {

@@ -25,6 +25,13 @@ public class TrialData extends SavedData {
     public UUID chosen;
     /** everyone who has entered this trial to help */
     public final Set<UUID> participants = new HashSet<>();
+    /** where the fight is: see TrialManager.STAGE_* */
+    public int stage;
+    /** ticks until the next boss rises */
+    public int timer;
+    /** the boss being fought */
+    @Nullable
+    public UUID boss;
     /** the one player in this world who carries the Fire Fiend's power */
     @Nullable
     public UUID holder;
@@ -39,6 +46,9 @@ public class TrialData extends SavedData {
         d.active = tag.getBoolean("Active");
         d.chosen = tag.hasUUID("Chosen") ? tag.getUUID("Chosen") : null;
         d.holder = tag.hasUUID("Holder") ? tag.getUUID("Holder") : null;
+        d.stage = tag.getInt("Stage");
+        d.timer = tag.getInt("Timer");
+        d.boss = tag.hasUUID("Boss") ? tag.getUUID("Boss") : null;
         for (Tag t : tag.getList("Participants", Tag.TAG_INT_ARRAY)) {
             d.participants.add(NbtUtils.loadUUID(t));
         }
@@ -55,6 +65,11 @@ public class TrialData extends SavedData {
         if (holder != null) {
             tag.putUUID("Holder", holder);
         }
+        tag.putInt("Stage", stage);
+        tag.putInt("Timer", timer);
+        if (boss != null) {
+            tag.putUUID("Boss", boss);
+        }
         ListTag list = new ListTag();
         for (UUID id : participants) {
             list.add(NbtUtils.createUUID(id));
@@ -68,6 +83,9 @@ public class TrialData extends SavedData {
         chosen = chosenPlayer;
         participants.clear();
         participants.add(chosenPlayer);
+        stage = 0;
+        timer = 0;
+        boss = null;
         setDirty();
     }
 
@@ -75,6 +93,9 @@ public class TrialData extends SavedData {
         active = false;
         chosen = null;
         participants.clear();
+        stage = 0;
+        timer = 0;
+        boss = null;
         setDirty();
     }
 }

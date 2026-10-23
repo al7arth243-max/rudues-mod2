@@ -1015,7 +1015,7 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
         if (finale && !finaleKill && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
             return false;
         }
-        if (!finaleKill && !level().isClientSide && getTarget() instanceof ServerPlayer sp && PowerData.has(sp)) {
+        if (!finaleKill && !level().isClientSide && getTarget() instanceof ServerPlayer sp && HeroForm.empowered(sp)) {
             // it can't be finished off by plain damage: at 15% the end fight takes over
             float floor = getMaxHealth() * FINALE_AT;
             if (getHealth() - amount < floor) {

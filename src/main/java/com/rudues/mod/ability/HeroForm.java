@@ -91,13 +91,18 @@ public class HeroForm {
         State s = STATES.get(p.getUUID());
         int gauge = s == null ? 0 : s.gauge;
         int remaining = (s != null && s.phase == 2) ? Math.max(0, HeroConstants.DEMON_TICKS - s.phaseTicks) : 0;
-        Network.sendState(p, PowerData.has(p), gauge, remaining);
+        Network.sendState(p, empowered(p), gauge, remaining);
     }
 
     // ------------------------------------------------------------------ the Infernal Hero's fight
+    /** holds the power, or is borrowing the Hero of Hell form for the trial's last fight */
+    public static boolean empowered(net.minecraft.world.entity.player.Player p) {
+        return PowerData.has(p) || (p instanceof ServerPlayer sp && com.rudues.mod.trial.TrialManager.heroGranted(sp));
+    }
+
     /** the Hero fights Titan against Titan: whoever it hunts is pulled into the Hero of Hell form */
     public static void forceForm(ServerPlayer p) {
-        if (!PowerData.has(p)) {
+        if (!empowered(p)) {
             return;
         }
         State s = state(p);

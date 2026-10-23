@@ -147,7 +147,10 @@ public class InfernalShadowRenderer extends GeoEntityRenderer<InfernalShadowEnti
     /** a shadow of the player: their skin, drained of light */
     @Override
     public Color getRenderColor(InfernalShadowEntity animatable, float partialTick, int packedLight) {
-        return copiedPlayer(animatable) != null ? Color.ofRGBA(0.42F, 0.36F, 0.50F, 1.0F) : Color.WHITE;
+        if (copiedPlayer(animatable) == null) {
+            return Color.WHITE;
+        }
+        return animatable.isPhaseTwo() ? Color.ofRGBA(0.50F, 0.40F, 0.62F, 1.0F) : Color.ofRGBA(0.62F, 0.55F, 0.70F, 1.0F);
     }
 
     // ------------------------------------------------------------ Hammer and Anvil: the red circle
