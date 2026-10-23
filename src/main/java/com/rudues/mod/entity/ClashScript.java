@@ -96,9 +96,6 @@ public final class ClashScript {
             case PH_CHARGE:
                 return reach + chargeTotal() - sample(ClashData.CLASH_CHARGE_TRAVEL, t);
             case PH_STRAIN:
-                if (stage == STAGE_POUND) {
-                    return new String[]{"pound_block", "pound_punch"};
-                }
                 return reach;
             case PH_RESOLVE: {
                 boolean winner = heroSide == (result == RESULT_LOSE);
