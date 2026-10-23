@@ -9,7 +9,9 @@ import net.minecraft.world.phys.Vec3;
  * from the Hero toward the player), so the server and the client always agree to the pixel and the two fists meet.
  * <pre>
  *   stage 0  punch clash      win: the Hero is shoved back ~6 blocks
- *   stage 1  punch clash      win: the Hero is launched ~16 blocks and lands in a skid, rising for...
+ *   stage 1  ground-and-pound the player rushes in and uppercuts it onto its back, mounts it and pounds its guard;
+ *                             win: a two-fisted slam, then it is hauled up overhead and thrown ~16 blocks, rising for...
+ *                             lose: it kicks the player off over its head
  *   stage 2  beam clash       win: the beams overwhelm it - it falls
  * phases:  CHARGE (both run in / rear back) -> STRAIN (locked, the button-mash) -> RESOLVE (one breaks through) -> next
  * </pre>
@@ -18,7 +20,7 @@ public final class ClashScript {
     private ClashScript() {
     }
 
-    public static final int STAGE_PUNCH1 = 0, STAGE_PUNCH2 = 1, STAGE_BEAM = 2;
+    public static final int STAGE_PUNCH1 = 0, STAGE_POUND = 1, STAGE_BEAM = 2;
     public static final int PH_CHARGE = 0, PH_STRAIN = 1, PH_RESOLVE = 2, PH_WAIT = 3;
     public static final int RESULT_NONE = 0, RESULT_WIN = 1, RESULT_LOSE = 2;
 
@@ -40,7 +42,7 @@ public final class ClashScript {
     }
 
     public static int chargeTicks(int stage) {
-        return stage == STAGE_BEAM ? ClashData.BEAM_CLASH_END : ClashData.CLASH_CHARGE_CONTACT;
+        return stage == STAGE_BEAM ? ClashData.BEAM_CLASH_END : stage == STAGE_POUND ? ClashData.POUND_CHARGE_END : ClashData.CLASH_CHARGE_CONTACT;
     }
 
     public static int strainTicks(int stage) {
@@ -48,8 +50,11 @@ public final class ClashScript {
     }
 
     public static int resolveTicks(int stage, int result) {
+        if (stage == STAGE_POUND) {
+            return result == RESULT_WIN ? ClashData.POUND_WIN_END : ClashData.POUND_LOSE_END;
+        }
         if (result == RESULT_WIN) {
-            return stage == STAGE_PUNCH1 ? ClashData.CLASH_LOSE_END : stage == STAGE_PUNCH2 ? ClashData.CLASH_LOSE_FAR_END : ClashData.HERO_FALL_END;
+            return stage == STAGE_PUNCH1 ? ClashData.CLASH_LOSE_END : ClashData.HERO_FALL_END;
         }
         return ClashData.CLASH_LOSE_END;
     }
@@ -70,6 +75,11 @@ public final class ClashScript {
      * it is off the ground (the launch in clash 2). For the beam clash the resting distances are dHero/dPlayer.
      */
     public static float dist(boolean heroSide, int stage, int phase, int result, float t, float dHero, float dPlayer) {
+        if (stage == STAGE_POUND) {
+            // the ground-and-pound is baked as signed positions along u from the Hero's start; at() wants the Hero's negated
+            float a = poundAlong(heroSide, phase, result, t);
+            return heroSide ? -a : a;
+        }
         if (stage == STAGE_BEAM) {
             float d = heroSide ? dHero : dPlayer;
             if (phase != PH_RESOLVE) {
@@ -86,30 +96,57 @@ public final class ClashScript {
             case PH_CHARGE:
                 return reach + chargeTotal() - sample(ClashData.CLASH_CHARGE_TRAVEL, t);
             case PH_STRAIN:
+                if (stage == STAGE_POUND) {
+                    return new String[]{"pound_block", "pound_punch"};
+                }
                 return reach;
             case PH_RESOLVE: {
                 boolean winner = heroSide == (result == RESULT_LOSE);
                 if (winner) {
                     return reach - sample(ClashData.CLASH_WIN_TRAVEL, t);
                 }
-                float[] lose = heroSide && stage == STAGE_PUNCH2 ? ClashData.CLASH_LOSE_FAR_TRAVEL : ClashData.CLASH_LOSE_TRAVEL;
-                return reach - sample(lose, t);
+                return reach - sample(ClashData.CLASH_LOSE_TRAVEL, t);
             }
             default:
                 return reach;
         }
     }
 
-    /** the Hero's flight off the ground when clash 2 launches it */
+    private static float poundAlong(boolean heroSide, int phase, int result, float t) {
+        switch (phase) {
+            case PH_CHARGE:
+                return sample(heroSide ? ClashData.POUND_CHARGE_HERO_ALONG : ClashData.POUND_CHARGE_PLAYER_ALONG, t);
+            case PH_RESOLVE:
+                if (result == RESULT_WIN) {
+                    return sample(heroSide ? ClashData.POUND_WIN_HERO_ALONG : ClashData.POUND_WIN_PLAYER_ALONG, t);
+                }
+                return sample(heroSide ? ClashData.POUND_LOSE_HERO_ALONG : ClashData.POUND_LOSE_PLAYER_ALONG, t);
+            default:
+                return heroSide ? ClashData.POUND_HERO_REST : ClashData.POUND_MOUNT;
+        }
+    }
+
+    /** how high off the ground a fighter is: the pounce onto the Hero, it being hauled overhead and thrown, the kick-off */
     public static float height(boolean heroSide, int stage, int phase, int result, float t) {
-        if (!heroSide || stage != STAGE_PUNCH2 || phase != PH_RESOLVE || result != RESULT_WIN) {
+        if (stage != STAGE_POUND) {
             return 0.0F;
         }
-        float a = 2.4F, b = ClashData.CLASH_LOSE_FAR_LAND - 0.4F;
-        if (t <= a || t >= b) {
-            return 0.0F;
+        switch (phase) {
+            case PH_CHARGE:
+                return sample(heroSide ? ClashData.POUND_CHARGE_HERO_H : ClashData.POUND_CHARGE_PLAYER_H, t);
+            case PH_RESOLVE:
+                if (result == RESULT_WIN) {
+                    return sample(heroSide ? ClashData.POUND_WIN_HERO_H : ClashData.POUND_WIN_PLAYER_H, t);
+                }
+                return sample(heroSide ? ClashData.POUND_LOSE_HERO_H : ClashData.POUND_LOSE_PLAYER_H, t);
+            default:
+                return 0.0F;
         }
-        return 3.0F * Mth.sin((float) Math.PI * (t - a) / (b - a));
+    }
+
+    /** a point on the axis at a signed distance from O (+ toward the player's side), h above the ground */
+    public static Vec3 along(Vec3 origin, Vec3 u, float a, float h) {
+        return origin.add(u.scale(a)).add(0, h, 0);
     }
 
     /** a point at distance d from O along the axis, toward the player when d > 0 on the player's side */
@@ -131,13 +168,21 @@ public final class ClashScript {
     public static String[] clips(int stage, int phase, int result) {
         switch (phase) {
             case PH_CHARGE:
+                if (stage == STAGE_POUND) {
+                    return new String[]{"pound_fall", "pound_rush"};
+                }
                 return stage == STAGE_BEAM ? new String[]{"beam_clash", "beam_clash"} : new String[]{"clash_charge", "clash_charge"};
             case PH_STRAIN:
+                if (stage == STAGE_POUND) {
+                    return new String[]{"pound_block", "pound_punch"};
+                }
                 return stage == STAGE_BEAM ? new String[]{"beam_strain", "beam_strain"} : new String[]{"clash_strain", "clash_strain"};
             case PH_RESOLVE:
+                if (stage == STAGE_POUND) {
+                    return result == RESULT_WIN ? new String[]{"pound_thrown", "pound_finish"} : new String[]{"pound_kick", "pound_kicked"};
+                }
                 if (result == RESULT_WIN) {
-                    return stage == STAGE_BEAM ? new String[]{"hero_fall", "beam_win"}
-                            : new String[]{stage == STAGE_PUNCH2 ? "clash_lose_far" : "clash_lose", "clash_win"};
+                    return stage == STAGE_BEAM ? new String[]{"hero_fall", "beam_win"} : new String[]{"clash_lose", "clash_win"};
                 }
                 return stage == STAGE_BEAM ? new String[]{"beam_win", "clash_lose"} : new String[]{"clash_win", "clash_lose"};
             default:

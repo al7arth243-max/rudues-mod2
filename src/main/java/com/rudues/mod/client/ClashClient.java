@@ -89,7 +89,7 @@ public final class ClashClient {
             } else {
                 startCinematic();
             }
-            if (m.phase == ClashScript.PH_STRAIN && m.stage != ClashScript.STAGE_BEAM) {
+            if (m.phase == ClashScript.PH_STRAIN && m.stage == ClashScript.STAGE_PUNCH1) {
                 kick(1.0F, 0.85F);             // the fists meet
             } else if (m.phase == ClashScript.PH_RESOLVE) {
                 kick(1.2F, 0.7F);
@@ -99,6 +99,40 @@ public final class ClashClient {
         }
         if (old == null || m.phase != ClashScript.PH_STRAIN) {
             SHOWN_BALANCE.put(m.heroId, m.balance);
+        }
+    }
+
+    /** clash 2's impacts, felt through the camera */
+    private static void poundKicks(ClashPacket s, int t) {
+        switch (s.phase) {
+            case ClashScript.PH_CHARGE -> {
+                if (t == ClashData.POUND_CHARGE_HIT) {
+                    kick(1.2F, 0.8F);           // the uppercut
+                } else if (t == ClashData.POUND_CHARGE_HERO_DOWN) {
+                    kick(0.9F, 0.0F);           // it hits the ground
+                } else if (t == ClashData.POUND_CHARGE_MOUNT) {
+                    kick(0.5F, 0.0F);
+                }
+            }
+            case ClashScript.PH_STRAIN -> {
+                int k = t % 20;
+                if (k == ClashData.POUND_HIT_A || k == ClashData.POUND_HIT_B) {
+                    kick(0.45F, 0.12F);
+                }
+            }
+            case ClashScript.PH_RESOLVE -> {
+                if (s.result == ClashScript.RESULT_WIN) {
+                    if (t == ClashData.POUND_WIN_SLAM) {
+                        kick(1.3F, 0.7F);
+                    } else if (t == ClashData.POUND_WIN_LAND) {
+                        kick(0.9F, 0.0F);
+                    }
+                } else if (t == ClashData.POUND_LOSE_KICK) {
+                    kick(1.1F, 0.4F);
+                }
+            }
+            default -> {
+            }
         }
     }
 
@@ -153,7 +187,7 @@ public final class ClashClient {
     public static Vec3 playerPos(ClashPacket s, float partialTick) {
         float t = time(s, partialTick);
         float d = ClashScript.dist(false, s.stage, s.phase, s.result, t, s.dHero, s.dPlayer);
-        return ClashScript.at(origin(s), ClashScript.axis(s.yaw), false, d, 0.0F);
+        return ClashScript.at(origin(s), ClashScript.axis(s.yaw), false, d, ClashScript.height(false, s.stage, s.phase, s.result, t));
     }
 
     private static void startCinematic() {
@@ -214,6 +248,9 @@ public final class ClashClient {
             if (s.stage == ClashScript.STAGE_BEAM && s.phase == ClashScript.PH_CHARGE && (int) t == ClashData.BEAM_CLASH_FIRE) {
                 kick(1.1F, 0.6F);               // both beams leave the jaws
             }
+            if (s.stage == ClashScript.STAGE_POUND) {
+                poundKicks(s, (int) t);
+            }
             return;
         }
         if (s == null || !scripted(s)) {
@@ -269,6 +306,9 @@ public final class ClashClient {
         Vec3 side = new Vec3(u.z, 0, -u.x);                   // with the camera on this side the player is on the left
         Vec3 h = heroPos(s, partialTick), p = playerPos(s, partialTick);
         boolean beam = s.stage == ClashScript.STAGE_BEAM;
+        if (s.stage == ClashScript.STAGE_POUND) {
+            return poundShot(s, t, o, u, side, up, h, p);
+        }
         switch (s.phase) {
             case ClashScript.PH_CHARGE -> {
                 if (beam) {
@@ -290,10 +330,6 @@ public final class ClashClient {
             }
             default -> {
                 boolean win = s.result == ClashScript.RESULT_WIN;
-                if (win && s.stage == ClashScript.STAGE_PUNCH2 && t >= 9) {
-                    // the Hero from the front as it is launched away
-                    return new Shot(h.add(u.scale(10.5)).add(side.scale(2.2)).add(up.scale(3.8)), h.add(up.scale(3.2)), 58);
-                }
                 if (win && beam && t >= 14) {
                     return new Shot(h.add(u.scale(12.0)).add(side.scale(3.0)).add(up.scale(4.5)), h.add(up.scale(2.4)), 60);
                 }
@@ -302,6 +338,53 @@ public final class ClashClient {
                     return new Shot(p.add(u.scale(4.8)).add(side.scale(2.9)).add(up.scale(6.3)), h.add(up.scale(3.0)), 70);
                 }
                 return new Shot(h.add(u.scale(-4.8)).add(side.scale(-2.9)).add(up.scale(6.3)), p.add(up.scale(3.0)), 70);
+            }
+        }
+    }
+
+    /** clash 2: tracking the rush, low under the uppercut, wide on the fall; under the pounding; the slam, the throw */
+    private static Shot poundShot(ClashPacket s, float t, Vec3 o, Vec3 u, Vec3 side, Vec3 up, Vec3 h, Vec3 p) {
+        Vec3 face = o.add(u.scale(ClashData.POUND_FACE_ALONG));
+        switch (s.phase) {
+            case ClashScript.PH_CHARGE -> {
+                int hit = ClashData.POUND_CHARGE_HIT;
+                if (t < hit - 5) {
+                    // alongside the player as it runs in
+                    Vec3 mid = h.lerp(p, 0.55);
+                    return new Shot(mid.add(side.scale(11.0)).add(up.scale(2.4)), mid.add(up.scale(2.8)), 64);
+                }
+                if (t < hit + 9) {
+                    // low, looking up the line of the uppercut into its jaw
+                    Vec3 chin = o.add(u.scale(ClashData.POUND_CHIN_ALONG)).add(up.scale(ClashData.POUND_CHIN_UP));
+                    float k = Mth.clamp((t - hit + 5) / 14.0F, 0, 1);
+                    return new Shot(o.add(u.scale(2.6 + 0.6 * k)).add(side.scale(4.8)).add(up.scale(0.9)), chin.add(up.scale(-0.6 + 0.8 * k)), 70);
+                }
+                // wide: it goes over onto its back and the player is on top of it
+                Vec3 c = o.add(u.scale(-2.6));
+                return new Shot(c.add(side.scale(12.5)).add(up.scale(4.6)).add(u.scale(1.5)), c.add(up.scale(1.6)), 62);
+            }
+            case ClashScript.PH_STRAIN -> {
+                // down by its head, looking up past its guard at the player raining blows
+                float a = 0.18F * Mth.sin(t * 0.04F);
+                Vec3 sd = side.scale(Mth.cos(a)).add(u.scale(Mth.sin(a)));
+                return new Shot(face.add(u.scale(-4.2)).add(sd.scale(5.2)).add(up.scale(1.6)), p.add(up.scale(2.0)).add(u.scale(-0.6)), 66);
+            }
+            default -> {
+                if (s.result != ClashScript.RESULT_WIN) {
+                    Vec3 mid = h.lerp(p, 0.5);
+                    return new Shot(mid.add(side.scale(13.0)).add(up.scale(4.0)), mid.add(up.scale(1.8)), 64);
+                }
+                if (t < 24) {
+                    // the two-fisted slam, close
+                    Vec3 chest = o.add(u.scale(ClashData.POUND_CHEST_ALONG)).add(up.scale(ClashData.POUND_CHEST_UP));
+                    return new Shot(chest.add(side.scale(5.8)).add(u.scale(1.6)).add(up.scale(2.6)), chest.add(up.scale(1.2)), 62);
+                }
+                if (t < ClashData.POUND_WIN_RELEASE + 3) {
+                    // wide and side-on as it is hauled up overhead
+                    return new Shot(p.add(side.scale(12.0)).add(u.scale(-2.5)).add(up.scale(3.6)), p.add(u.scale(-1.5)).add(up.scale(3.6)), 66);
+                }
+                // over the player's shoulder: it flies, lands far off and gets up facing us
+                return new Shot(p.add(u.scale(6.5)).add(side.scale(6.5)).add(up.scale(5.2)), h.add(up.scale(2.2)), 58);
             }
         }
     }

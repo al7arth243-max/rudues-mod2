@@ -225,6 +225,13 @@ public final class TrialManager {
                 d.setDirty();
             }
             case STAGE_SHADOW, STAGE_HERO -> {
+                if (d.stage == STAGE_HERO) {
+                    // the chosen one stays a Titan for the whole fight, whoever the Hero is going for
+                    if (chosen.tickCount % 20 == 0) {
+                        HeroForm.forceForm(chosen);
+                    }
+                    HeroForm.sustain(chosen);
+                }
                 if (chosen.tickCount % 40 == 0 && (d.boss == null || trial.getEntity(d.boss) == null)) {
                     // the boss is gone without falling: it rises again
                     d.stage = d.stage == STAGE_SHADOW ? STAGE_SHADOW_RISING : STAGE_HERO_RISING;

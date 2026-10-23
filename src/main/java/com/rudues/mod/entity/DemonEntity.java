@@ -28,6 +28,11 @@ import java.util.UUID;
  * player every tick (the player stays the real, controllable entity and keeps the health pool).
  */
 public class DemonEntity extends Entity implements GeoEntity {
+    /**
+     * Client only: the players whose demon this client can see. Other players' effects are never sent to us, so this
+     * is how we know they are transformed (their normal model is hidden and their hitbox made demon-sized).
+     */
+    public static final java.util.Set<UUID> CLIENT_OWNERS = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private static final EntityDataAccessor<Optional<UUID>> OWNER =
             SynchedEntityData.defineId(DemonEntity.class, EntityDataSerializers.OPTIONAL_UUID);
     private static final EntityDataAccessor<Boolean> MOVING =
@@ -65,6 +70,11 @@ public class DemonEntity extends Entity implements GeoEntity {
     private static final RawAnimation BEAM_CLASH = RawAnimation.begin().thenPlayAndHold("animation.infernal_titan.beam_clash");
     private static final RawAnimation BEAM_STRAIN = RawAnimation.begin().thenLoop("animation.infernal_titan.beam_strain");
     private static final RawAnimation BEAM_WIN = RawAnimation.begin().thenPlay("animation.infernal_titan.beam_win");
+    // clash 2: the uppercut, the mount and the pounding, then the slam and throw (or being kicked off)
+    private static final RawAnimation POUND_RUSH = RawAnimation.begin().thenPlayAndHold("animation.infernal_titan.pound_rush");
+    private static final RawAnimation POUND_PUNCH = RawAnimation.begin().thenLoop("animation.infernal_titan.pound_punch");
+    private static final RawAnimation POUND_FINISH = RawAnimation.begin().thenPlay("animation.infernal_titan.pound_finish");
+    private static final RawAnimation POUND_KICKED = RawAnimation.begin().thenPlay("animation.infernal_titan.pound_kicked");
 
     /** length of the spawn/roar animation in ticks */
     private static final int INTRO_TICKS = 28;
@@ -162,7 +172,11 @@ public class DemonEntity extends Entity implements GeoEntity {
                 .triggerableAnim("clash_lose", CLASH_LOSE)
                 .triggerableAnim("beam_clash", BEAM_CLASH)
                 .triggerableAnim("beam_strain", BEAM_STRAIN)
-                .triggerableAnim("beam_win", BEAM_WIN));
+                .triggerableAnim("beam_win", BEAM_WIN)
+                .triggerableAnim("pound_rush", POUND_RUSH)
+                .triggerableAnim("pound_punch", POUND_PUNCH)
+                .triggerableAnim("pound_finish", POUND_FINISH)
+                .triggerableAnim("pound_kicked", POUND_KICKED));
     }
 
     private PlayState mainAnimation(AnimationState<DemonEntity> state) {

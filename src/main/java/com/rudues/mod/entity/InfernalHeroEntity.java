@@ -18,6 +18,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.BossEvent;
@@ -74,9 +75,9 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
     private static final RawAnimation GUARD = RawAnimation.begin().thenLoop("animation.infernal_hero.guard");
     private static final RawAnimation STALK = RawAnimation.begin().thenLoop("animation.infernal_hero.stalk");
     private static final String[] ONCE = {"hurl", "leap_slash", "rend", "hell_beam", "tail_sweep", "clash_win", "clash_lose",
-            "clash_lose_far", "beam_win"};
-    private static final String[] HOLD = {"clash_charge", "beam_clash", "hero_fall"};
-    private static final String[] LOOPS = {"clash_strain", "beam_strain"};
+            "clash_lose_far", "beam_win", "pound_thrown", "pound_kick"};
+    private static final String[] HOLD = {"clash_charge", "beam_clash", "hero_fall", "pound_fall"};
+    private static final String[] LOOPS = {"clash_strain", "beam_strain", "pound_block"};
 
     public static final float SCALE = 1.295F;
     public static final float HURL_TURN = 12.0F, BEAM_TURN = 0.8F, BEAM_PITCH_TURN = 1.4F;
@@ -243,16 +244,21 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
         planTicks = 0;
         double d = horizontalDistanceTo(t);
         float r = random.nextFloat();
-        if (d > FAR) {
-            plannedMove = MOVE_LEAP;
-        } else if (beamCooldown <= 0 && d > 5.0 && r < 0.4F) {
+        if (beamCooldown <= 0 && d > 5.0 && r < 0.35F) {
             plannedMove = MOVE_BEAM;
+        } else if (d > FAR) {
+            // far away: it closes the gap - or makes you come to it through a fireball
+            plannedMove = r < 0.75F ? MOVE_LEAP : MOVE_HURL;
+            if (lastMove == MOVE_LEAP && random.nextBoolean()) {
+                plannedMove = MOVE_HURL;
+            }
         } else if (d < MELEE) {
-            plannedMove = r < 0.5F ? MOVE_REND : MOVE_TAIL;
+            // up close it mostly tears at you, but now and then hurls one point-blank
+            plannedMove = r < 0.4F ? MOVE_REND : r < 0.8F ? MOVE_TAIL : MOVE_HURL;
         } else {
-            plannedMove = r < 0.6F ? MOVE_HURL : (r < 0.8F ? MOVE_REND : MOVE_TAIL);
+            plannedMove = r < 0.55F ? MOVE_HURL : (r < 0.8F ? MOVE_REND : MOVE_TAIL);
         }
-        if (plannedMove == lastMove && plannedMove != MOVE_LEAP && random.nextBoolean()) {
+        if (plannedMove == lastMove && plannedMove != MOVE_LEAP && plannedMove != MOVE_HURL && random.nextBoolean()) {
             plannedMove = MOVE_NONE;      // a little less repetition
         }
     }
@@ -266,7 +272,7 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
         double d = horizontalDistanceTo(t);
         return switch (move) {
             case MOVE_LEAP -> d > 8.0 && d < 34.0;
-            case MOVE_HURL -> d > 4.0 && d < 32.0;
+            case MOVE_HURL -> d > 2.5 && d < 40.0;
             case MOVE_BEAM -> d > 4.0 && d < BEAM_RANGE - 4;
             case MOVE_REND, MOVE_TAIL -> d < MELEE + 0.5;
             default -> false;
@@ -501,35 +507,45 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
     // ---- 2. Leap Slash
     private void tickLeap(ServerLevel sl, @Nullable LivingEntity target, int t) {
         int off = HeroMoveData.LEAP_SLASH_TAKEOFF, land = HeroMoveData.LEAP_SLASH_LAND;
-        if (t < off) {
+        // the flight is timed a little ahead of the animation (clients draw mobs a few ticks late), so it is seen
+        // leaving the ground as the legs fire and touching down exactly as the claw lands
+        int go = off - 2, down = land - 3;
+        if (t < go) {
             turnToward(target, 10.0F);
             if (t % 2 == 0) {
                 sl.sendParticles(ModParticles.DARK_FLAME.get(), getX(), getY() + 0.3, getZ(), 6, 1.6, 0.2, 1.6, 0.04);
             }
             return;
         }
-        if (t == off) {
+        if (t == go) {
             Vec3 aim = target != null ? target.position() : position().add(forward(moveYaw).scale(12));
             Vec3 dir = aim.subtract(position()).multiply(1, 0, 1);
             double d = Math.min(30.0, Math.max(0.0, dir.length() - (target != null ? target.getBbWidth() * 0.5 + 2.6 : 3.4)));   // lands just short of you
             leapFrom = position();
-            leapTo = groundBelow(position().add(dir.normalize().scale(d)).add(0, 3, 0));
+            leapTo = landingSpot(dir.lengthSqr() < 1e-4 ? position() : position().add(dir.normalize().scale(d)));
             leapHeight = 3.0 + d * 0.16;
             moveYaw = yawTo(position(), aim);
             setNoGravity(true);
-            sl.sendParticles(ModParticles.DARK_FLAME_BIG.get(), getX(), getY() + 0.3, getZ(), 24, 1.5, 0.3, 1.5, 0.08);
-            sl.sendParticles(ParticleTypes.EXPLOSION, getX(), getY() + 0.2, getZ(), 2, 1.0, 0.1, 1.0, 0);
+        }
+        if (t == off) {
+            sl.sendParticles(ModParticles.DARK_FLAME_BIG.get(), leapFrom.x, leapFrom.y + 0.3, leapFrom.z, 24, 1.5, 0.3, 1.5, 0.08);
+            sl.sendParticles(ParticleTypes.EXPLOSION, leapFrom.x, leapFrom.y + 0.2, leapFrom.z, 2, 1.0, 0.1, 1.0, 0);
             playSound(SoundEvents.GENERIC_EXPLODE, 1.2F, 0.6F);
         }
         faceYaw(moveYaw);
-        if (t > off && t < land) {
-            float u = (t - off) / (float) (land - off);
+        if (t > go && t < down) {
+            float u = (t - go) / (float) (down - go);
+            // eases into the ground rather than dropping the last stretch in one tick
             Vec3 p = leapFrom.lerp(leapTo, u).add(0, leapHeight * 4 * u * (1 - u), 0);
             setPos(p.x, p.y, p.z);
             setDeltaMovement(Vec3.ZERO);
             if (t % 2 == 0) {
                 sl.sendParticles(ModParticles.DARK_FLAME.get(), getX(), getY() + 3, getZ(), 4, 0.8, 1.5, 0.8, 0.02);
             }
+        }
+        if (t >= down && t < land) {
+            setPos(leapTo.x, leapTo.y, leapTo.z);        // down: held there until the claw lands
+            setDeltaMovement(Vec3.ZERO);
         }
         if (t == land) {
             setPos(leapTo.x, leapTo.y, leapTo.z);
@@ -754,6 +770,19 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
         }
     }
 
+    /** where a leap comes down: the highest floor under its whole footprint (what its body would actually rest on) */
+    private Vec3 landingSpot(Vec3 p) {
+        double half = getBbWidth() * 0.5 - 0.3;
+        double top = -1e9;
+        for (double dx : new double[]{-half, 0, half}) {
+            for (double dz : new double[]{-half, 0, half}) {
+                Vec3 g = groundBelow(new Vec3(p.x + dx, p.y + 3, p.z + dz));
+                top = Math.max(top, g.y);
+            }
+        }
+        return new Vec3(p.x, top > -1e8 ? top : p.y, p.z);
+    }
+
     private Vec3 groundBelow(Vec3 p) {
         BlockPos.MutableBlockPos pos = BlockPos.containing(p.x, p.y + 0.5, p.z).mutable();
         for (int i = 0; i < 24; i++) {
@@ -808,6 +837,8 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
             origin = groundBelow(hp.add(u.scale(gap * 0.5)).add(0, 2, 0));
             dHero = (float) (gap * 0.5);
             dPlayer = (float) (gap * 0.5);
+        } else if (stage == ClashScript.STAGE_POUND) {
+            origin = groundBelow(hp.add(0, 2, 0));          // the player comes to it: it holds its ground
         } else {
             origin = groundBelow(hp.add(pp).scale(0.5).add(0, 2, 0));
         }
@@ -855,7 +886,8 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
 
     private Vec3 playerAt(float t) {
         Vec3 u = ClashScript.axis(axisYaw);
-        return ClashScript.at(origin, u, false, ClashScript.dist(false, stage, phase, result, t, dHero, dPlayer), 0.0F);
+        return ClashScript.at(origin, u, false, ClashScript.dist(false, stage, phase, result, t, dHero, dPlayer),
+                ClashScript.height(false, stage, phase, result, t));
     }
 
     /** presses from the clash player (rate-limited) */
@@ -896,6 +928,8 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
                         playSound(SoundEvents.WITHER_SHOOT, 3.0F, 0.4F);
                         playSound(SoundEvents.GENERIC_EXPLODE, 3.0F, 0.5F);
                     }
+                } else if (stage == ClashScript.STAGE_POUND) {
+                    poundChargeFx(sl, t, u);
                 } else if (t == ClashScript.chargeTicks(stage) - 1) {
                     // the fists meet
                     sl.sendParticles(ParticleTypes.EXPLOSION_EMITTER, contact.x, contact.y, contact.z, 1, 0, 0, 0, 0);
@@ -915,9 +949,21 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
                 if (t % 2 == 0) {
                     sendClash(true);
                 }
-                Vec3 at = stage == ClashScript.STAGE_BEAM ? beamMeet() : contact;
-                sl.sendParticles(t % 2 == 0 ? ModParticles.PURPLE_SPARK.get() : ModParticles.DARK_SPARK.get(), at.x, at.y, at.z, 3, 0.4, 0.6, 0.4, 0.4);
-                if (t % 10 == 0) {
+                if (stage == ClashScript.STAGE_POUND) {
+                    // every blow lands on its guard
+                    int k = t % 20;
+                    if (k == ClashData.POUND_HIT_A || k == ClashData.POUND_HIT_B) {
+                        Vec3 f = poundFace(u);
+                        sl.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), f.x, f.y, f.z, 8, 0.3, 0.2, 0.3, 0.12);
+                        sl.sendParticles(ModParticles.DARK_SPARK.get(), f.x, f.y, f.z, 10, 0.4, 0.3, 0.4, 0.35);
+                        playSound(SoundEvents.PLAYER_ATTACK_STRONG, 2.0F, 0.55F);
+                        playSound(SoundEvents.ZOMBIE_ATTACK_WOODEN_DOOR, 1.2F, 0.5F);
+                    }
+                } else {
+                    Vec3 at = stage == ClashScript.STAGE_BEAM ? beamMeet() : contact;
+                    sl.sendParticles(t % 2 == 0 ? ModParticles.PURPLE_SPARK.get() : ModParticles.DARK_SPARK.get(), at.x, at.y, at.z, 3, 0.4, 0.6, 0.4, 0.4);
+                }
+                if (stage != ClashScript.STAGE_POUND && t % 10 == 0) {
                     playSound(stage == ClashScript.STAGE_BEAM ? SoundEvents.BEACON_AMBIENT : SoundEvents.ANVIL_PLACE, 1.5F, 0.5F);
                 }
                 // won by holding the gauge above the line long enough (a dip below costs some of the hold, not all)
@@ -933,13 +979,12 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
                 }
             }
             case ClashScript.PH_RESOLVE -> {
-                if (t == 2 && result == ClashScript.RESULT_LOSE) {
+                if (result == ClashScript.RESULT_LOSE && t == (stage == ClashScript.STAGE_POUND ? ClashData.POUND_LOSE_KICK : 2)) {
                     float dmg = p.getMaxHealth() * (stage == ClashScript.STAGE_BEAM ? 0.25F : 0.18F);
                     p.hurt(damageSources().mobAttack(this), dmg);
                 }
-                if (result == ClashScript.RESULT_WIN && stage == ClashScript.STAGE_PUNCH2 && t == ClashData.CLASH_LOSE_FAR_LAND) {
-                    sl.sendParticles(ParticleTypes.EXPLOSION, getX(), getY() + 0.5, getZ(), 4, 1.5, 0.3, 1.5, 0);
-                    playSound(SoundEvents.GENERIC_EXPLODE, 2.5F, 0.5F);
+                if (stage == ClashScript.STAGE_POUND) {
+                    poundResolveFx(sl, t, u, p);
                 }
                 if (result == ClashScript.RESULT_WIN && stage == ClashScript.STAGE_BEAM && t % 3 == 0) {
                     sl.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), getX(), getY() + 3, getZ(), 10, 1.4, 2.4, 1.4, 0.08);
@@ -967,6 +1012,64 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
         }
     }
 
+    // ---- clash 2's impacts
+    private Vec3 poundFace(Vec3 u) {
+        return ClashScript.along(origin, u, ClashData.POUND_FACE_ALONG, ClashData.POUND_FACE_UP + 0.5F);
+    }
+
+    private void poundChargeFx(ServerLevel sl, int t, Vec3 u) {
+        if (t == ClashData.POUND_CHARGE_HIT) {
+            // the uppercut connects
+            Vec3 c = ClashScript.along(origin, u, ClashData.POUND_CHIN_ALONG, ClashData.POUND_CHIN_UP);
+            sl.sendParticles(ParticleTypes.EXPLOSION_EMITTER, c.x, c.y, c.z, 1, 0, 0, 0, 0);
+            sl.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), c.x, c.y, c.z, 30, 0.4, 0.8, 0.4, 0.3);
+            sl.sendParticles(ModParticles.DARK_SPARK.get(), c.x, c.y, c.z, 25, 0.3, 0.6, 0.3, 0.5);
+            playSound(SoundEvents.GENERIC_EXPLODE, 3.0F, 0.7F);
+            playSound(SoundEvents.ANVIL_LAND, 2.0F, 0.6F);
+        } else if (t == ClashData.POUND_CHARGE_HERO_DOWN) {
+            // it crashes down on its back
+            Vec3 c = ClashScript.along(origin, u, ClashData.POUND_CHEST_ALONG, 0.2F);
+            sl.sendParticles(ParticleTypes.EXPLOSION, c.x, c.y, c.z, 5, 2.0, 0.2, 1.0, 0);
+            sl.sendParticles(ModParticles.DARK_FLAME_BIG.get(), c.x, c.y, c.z, 30, 2.2, 0.2, 1.2, 0.05);
+            playSound(SoundEvents.GENERIC_EXPLODE, 2.5F, 0.45F);
+        } else if (t == ClashData.POUND_CHARGE_MOUNT) {
+            Vec3 c = ClashScript.along(origin, u, ClashData.POUND_MOUNT, 0.2F);
+            sl.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), c.x, c.y, c.z, 20, 1.2, 0.2, 1.2, 0.05);
+            playSound(SoundEvents.IRON_GOLEM_DAMAGE, 2.0F, 0.5F);
+        }
+    }
+
+    private void poundResolveFx(ServerLevel sl, int t, Vec3 u, ServerPlayer p) {
+        if (result == ClashScript.RESULT_WIN) {
+            if (t == ClashData.POUND_WIN_SLAM) {
+                // both fists down into its chest: the ground caves under it
+                Vec3 c = ClashScript.along(origin, u, ClashData.POUND_CHEST_ALONG, ClashData.POUND_CHEST_UP);
+                sl.sendParticles(ParticleTypes.EXPLOSION_EMITTER, c.x, c.y, c.z, 1, 0, 0, 0, 0);
+                sl.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), c.x, c.y - 1.2, c.z, 60, 2.5, 0.2, 2.5, 0.12);
+                sl.sendParticles(ModParticles.DARK_FLAME_BIG.get(), c.x, c.y - 1.2, c.z, 40, 2.5, 0.2, 2.5, 0.08);
+                playSound(SoundEvents.GENERIC_EXPLODE, 3.0F, 0.4F);
+                playSound(SoundEvents.ANVIL_LAND, 2.0F, 0.4F);
+            } else if (t == ClashData.POUND_WIN_RELEASE) {
+                sl.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), getX(), getY() + 2, getZ(), 30, 1.5, 1.0, 1.5, 0.2);
+                playSound(SoundEvents.ENDER_DRAGON_FLAP, 3.0F, 0.5F);
+                p.level().playSound(null, p.blockPosition(), SoundEvents.RAVAGER_ROAR, SoundSource.PLAYERS, 2.0F, 0.7F);
+            } else if (t > ClashData.POUND_WIN_RELEASE && t < ClashData.POUND_WIN_LAND && t % 2 == 0) {
+                sl.sendParticles(ModParticles.DARK_FLAME.get(), getX(), getY() + 2, getZ(), 6, 0.8, 0.8, 0.8, 0.02);
+            } else if (t == ClashData.POUND_WIN_LAND) {
+                sl.sendParticles(ParticleTypes.EXPLOSION_EMITTER, getX(), getY() + 0.5, getZ(), 1, 0, 0, 0, 0);
+                sl.sendParticles(ModParticles.DARK_FLAME_BIG.get(), getX(), getY() + 0.3, getZ(), 50, 2.5, 0.2, 2.5, 0.08);
+                playSound(SoundEvents.GENERIC_EXPLODE, 3.0F, 0.5F);
+            } else if (t > ClashData.POUND_WIN_LAND && t < ClashData.POUND_WIN_LAND + 8) {
+                sl.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, getX(), getY() + 0.2, getZ(), 2, 1.0, 0.1, 1.0, 0.01);
+            }
+        } else if (t == ClashData.POUND_LOSE_KICK) {
+            Vec3 c = ClashScript.along(origin, u, ClashData.POUND_MOUNT, 2.0F);
+            sl.sendParticles(ParticleTypes.EXPLOSION, c.x, c.y, c.z, 2, 0.3, 0.3, 0.3, 0);
+            sl.sendParticles(ModParticles.DARK_FLAME_BIG.get(), c.x, c.y, c.z, 30, 0.6, 0.6, 0.6, 0.25);
+            playSound(SoundEvents.GENERIC_EXPLODE, 2.5F, 0.6F);
+        }
+    }
+
     private void turnTowardPlayer(ServerPlayer p) {
         faceYaw(yawTo(position(), p.position()));
     }
@@ -981,7 +1084,8 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
     private void resolve(int r) {
         result = r;
         ServerLevel sl = (ServerLevel) level();
-        Vec3 at = stage == ClashScript.STAGE_BEAM ? beamMeet() : origin.add(0, ClashData.FIST_HEIGHT, 0);
+        Vec3 at = stage == ClashScript.STAGE_BEAM ? beamMeet()
+                : stage == ClashScript.STAGE_POUND ? poundFace(ClashScript.axis(axisYaw)) : origin.add(0, ClashData.FIST_HEIGHT, 0);
         sl.sendParticles(ParticleTypes.EXPLOSION_EMITTER, at.x, at.y, at.z, 1, 0, 0, 0, 0);
         sl.sendParticles(r == ClashScript.RESULT_WIN ? ModParticles.PURPLE_FLAME_BIG.get() : ModParticles.DARK_FLAME_BIG.get(),
                 at.x, at.y, at.z, 50, 1.0, 1.5, 1.0, 0.3);

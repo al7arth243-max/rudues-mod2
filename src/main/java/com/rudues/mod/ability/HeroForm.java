@@ -116,8 +116,24 @@ public class HeroForm {
     /** while the Hero lives the form doesn't run out (it never drops below 20 s left) */
     public static void sustain(ServerPlayer p) {
         State s = STATES.get(p.getUUID());
-        if (s != null && s.phase == 2 && s.phaseTicks > HeroConstants.DEMON_TICKS - 400) {
+        if (s == null || s.phase != 2) {
+            return;
+        }
+        if (s.phaseTicks > HeroConstants.DEMON_TICKS - 400) {
             s.phaseTicks = HeroConstants.DEMON_TICKS - 400;
+        }
+        if (p.tickCount % 20 == 0) {
+            // the client counts the form down on its own: tell it the form is still on, or its moves lock out
+            sync(p);
+            // and keep the form's own Speed II / Jump Boost IX from running out with the original timer
+            MobEffectInstance speed = p.getEffect(MobEffects.MOVEMENT_SPEED);
+            if (speed == null || speed.getDuration() < 100) {
+                p.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 440, 1, false, false, true));
+            }
+            MobEffectInstance jump = p.getEffect(MobEffects.JUMP);
+            if (s.attack == null && (jump == null || jump.getDuration() < 100)) {
+                p.addEffect(new MobEffectInstance(MobEffects.JUMP, 440, 8, false, false, true));
+            }
         }
     }
 

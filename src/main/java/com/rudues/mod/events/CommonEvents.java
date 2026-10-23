@@ -50,7 +50,8 @@ public class CommonEvents {
         try {
             if (event.getEntity() instanceof Player player
                     && ModEffects.HERO_OF_HELL.isPresent()
-                    && player.hasEffect(ModEffects.HERO_OF_HELL.get())
+                    && (player.hasEffect(ModEffects.HERO_OF_HELL.get())
+                        || player.level().isClientSide && com.rudues.mod.entity.DemonEntity.CLIENT_OWNERS.contains(player.getUUID()))
                     && (event.getPose() == Pose.STANDING || event.getPose() == Pose.CROUCHING)) {
                 event.setNewSize(EntityDimensions.scalable(HeroConstants.DEMON_WIDTH, HeroConstants.DEMON_HEIGHT), false);
                 // Player.getEyeHeight ignores the hitbox, so the eye height must be set explicitly

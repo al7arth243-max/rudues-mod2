@@ -44,8 +44,10 @@ public class ClientForgeEvents {
         if (mc.player == null) {
             wasDemon = false;
             camBlend = camBlendO = 0.0F;
+            com.rudues.mod.entity.DemonEntity.CLIENT_OWNERS.clear();
             return;
         }
+        trackDemonOwners(mc);
 
         if (ClientPowerState.heroTicks > 0) {
             ClientPowerState.heroTicks--;
@@ -86,11 +88,49 @@ public class ClientForgeEvents {
         }
     }
 
-    /** The player is drawn as the GeckoLib demon instead of the normal player model. */
+    /** The player is drawn as the GeckoLib demon instead of the normal player model (other players too). */
     @SubscribeEvent
     public static void onRenderPlayer(RenderPlayerEvent.Pre event) {
-        if (event.getEntity().hasEffect(ModEffects.HERO_OF_HELL.get())) {
+        if (event.getEntity().hasEffect(ModEffects.HERO_OF_HELL.get())
+                || com.rudues.mod.entity.DemonEntity.CLIENT_OWNERS.contains(event.getEntity().getUUID())) {
             event.setCanceled(true);
+        }
+    }
+
+    /** which players' demons are in this world right now; a change resizes that player's hitbox here */
+    private static void trackDemonOwners(Minecraft mc) {
+        if (mc.level == null) {
+            return;
+        }
+        java.util.Set<java.util.UUID> now = new java.util.HashSet<>();
+        for (Entity e : mc.level.entitiesForRendering()) {
+            if (e instanceof com.rudues.mod.entity.DemonEntity d && d.getOwnerUUID() != null) {
+                now.add(d.getOwnerUUID());
+            }
+        }
+        java.util.Set<java.util.UUID> owners = com.rudues.mod.entity.DemonEntity.CLIENT_OWNERS;
+        if (now.equals(owners)) {
+            return;
+        }
+        java.util.Set<java.util.UUID> changed = new java.util.HashSet<>(owners);
+        changed.addAll(now);
+        for (java.util.UUID id : now) {
+            if (owners.contains(id)) {
+                changed.remove(id);
+            }
+        }
+        for (java.util.UUID id : owners) {
+            if (now.contains(id)) {
+                changed.remove(id);
+            }
+        }
+        owners.clear();
+        owners.addAll(now);
+        for (java.util.UUID id : changed) {
+            net.minecraft.world.entity.player.Player p = mc.level.getPlayerByUUID(id);
+            if (p != null) {
+                p.refreshDimensions();
+            }
         }
     }
 
