@@ -30,7 +30,7 @@
   "ability.rudues.hellfire": "Hellfire",
   "ability.rudues.hellfire.desc": "Roar for 3 seconds as fountains of purple fire erupt across a huge area, then detonate in a colossal explosion.",
   "ability.rudues.slash_combo": "Slash Combo",
-  "ability.rudues.slash_combo.desc": "Rake your claws through enemies in a multi-hit combo.",
+  "ability.rudues.slash_combo.desc": "Three heavy claw slashes, ending in a two-handed cleave.",
   "message.rudues.power_gained": "The Fire Fiend's power surges through you!",
   "message.rudues.already_powered": "You already carry the Fire Fiend's power.",
   "message.rudues.cooldown": "%s is recharging (%ss)",

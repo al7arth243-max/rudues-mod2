@@ -353,7 +353,7 @@ public class HeroForm {
                 s.grabbed = null;
             }
             default -> {
-                s.busy = 24;
+                s.busy = 56;   // three heavy slashes: 2.7 s
                 anim = "slash";
             }
         }
@@ -584,23 +584,26 @@ public class HeroForm {
     // ------------------------------------------------------------------ 4. Slash Combo
     private static void tickSlash(ServerPlayer p, State s, ServerLevel level) {
         int a = s.attackTicks;
+        // three heavy slashes; these ticks are the moments the claws pass through the target in the animation
         int idx = switch (a) {
-            case 4 -> 0;
-            case 8 -> 1;
-            case 12 -> 2;
-            case 18 -> 3;
+            case 11 -> 0;   // near claw, high right to low left
+            case 26 -> 1;   // far claw, high left to low right
+            case 42 -> 2;   // two-handed overhead cleave
             default -> -1;
         };
         if (idx >= 0) {
-            boolean finisher = idx == 3;
-            cone(p, level, 10.0, 0.15, finisher ? 45.0F : 25.0F, finisher ? 3.0 : 0.9, finisher ? 10 : 5, false);
+            boolean finisher = idx == 2;
+            cone(p, level, 10.0, 0.15, finisher ? 60.0F : 35.0F, finisher ? 3.4 : 1.4, finisher ? 10 : 6, false);
             slashArc(p, level, idx, finisher);
-            level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.5F, finisher ? 0.5F : 0.7F);
+            level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.8F, finisher ? 0.45F : 0.55F);
+            level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, 1.4F, finisher ? 0.5F : 0.6F);
             if (finisher) {
-                level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.0F, 1.2F);
+                level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.2F, 0.9F);
+                Vec3 g = p.position().add(p.getLookAngle().multiply(1, 0, 1).normalize().scale(3.0));
+                level.sendParticles(ParticleTypes.EXPLOSION, g.x, g.y + 0.3, g.z, 3, 1.0, 0.2, 1.0, 0);
             }
         }
-        if (a >= 22) {
+        if (a >= 54) {
             s.attack = null;
         }
     }
@@ -611,11 +614,14 @@ public class HeroForm {
         right = right.lengthSqr() < 1.0E-4 ? new Vec3(1, 0, 0) : right.normalize();
         Vec3 center = chest(p);
         double tilt = (idx % 2 == 0) ? 1.0 : -1.0;
-        double scale = finisher ? 2.3 : 1.6;
+        double scale = finisher ? 2.0 : 1.7;
         for (int i = -10; i <= 10; i++) {
             double t = i / 10.0;
-            Vec3 pt = center.add(look.scale((3.2 - 1.4 * t * t) * scale))
-                    .add(right.scale(t * 3.4 * scale)).add(0, tilt * t * 1.8 * scale, 0);
+            // the finisher is a vertical cleave from overhead down to the ground; the others cut diagonally across
+            Vec3 pt = finisher
+                    ? center.add(look.scale((2.6 - 1.0 * t * t) * scale)).add(0, -t * 3.2, 0)
+                    : center.add(look.scale((3.2 - 1.4 * t * t) * scale))
+                        .add(right.scale(t * 3.4 * scale)).add(0, tilt * t * 1.8 * scale, 0);
             level.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), pt.x, pt.y, pt.z, 1, 0.1, 0.1, 0.1, 0);
             if (i % 2 == 0) {
                 level.sendParticles(ModParticles.PURPLE_SPARK.get(), pt.x, pt.y, pt.z, 2, 0.2, 0.2, 0.2, 0.3);
