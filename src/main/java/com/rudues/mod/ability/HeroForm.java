@@ -318,9 +318,9 @@ public class HeroForm {
         String anim;
         switch (type) {
             case CONCENTRATED_BEAM -> {
-                s.busy = 76;
+                s.busy = BEAM_TOTAL;
                 anim = "beam";
-                rootPlayer(p, 76);
+                rootPlayer(p, BEAM_TOTAL);
             }
             case OBLITERATOR_MAXIMUM -> {
                 s.busy = 18;
@@ -367,17 +367,27 @@ public class HeroForm {
     }
 
     // ------------------------------------------------------------------ 1. Concentrated Beam (1s charge + 3s beam)
+    private static final int BEAM_START = 22;      // 1.10 s
+    private static final int BEAM_STOP = 82;       // 4.10 s: the beam itself lasts 3 seconds
+    private static final int BEAM_AFTERGLOW = 84;  // 4.20 s
+    private static final int BEAM_TOTAL = 101;     // 5.06 s: the whole animation
+
     private static void tickBeam(ServerPlayer p, State s, ServerLevel level) {
         int a = s.attackTicks;
         Vec3 look = p.getLookAngle();
         Vec3 origin = p.position().add(0, HeroConstants.BEAM_Y, 0).add(look.scale(HeroConstants.BEAM_FORWARD));
 
-        if (a < 10) {
-            if (a == 1) {
+        // timing follows the mouth_beam animation: strain 0.18-1.10 s, beam 1.10-4.10 s, afterglow to 4.20 s
+        if (a < BEAM_START) {
+            if (a == 4) {
                 level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.CONDUIT_ACTIVATE, SoundSource.PLAYERS, 1.5F, 0.6F);
             }
-            if (a % 2 == 0) {
-                double r = 3.0 * (1.0 - a / 10.0) + 0.4;
+            if (a == 12) {
+                level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.PLAYERS, 1.2F, 1.4F);
+            }
+            if (a >= 4 && a % 2 == 0) {
+                // power gathers in toward his maw as he strains
+                double r = 3.4 * (1.0 - (a - 4) / (double) (BEAM_START - 4)) + 0.4;
                 for (int i = 0; i < 10; i++) {
                     Vec3 dir = new Vec3(p.getRandom().nextGaussian(), p.getRandom().nextGaussian(), p.getRandom().nextGaussian()).normalize();
                     Vec3 c = origin.add(dir.scale(r));
@@ -387,10 +397,20 @@ public class HeroForm {
             }
             return;
         }
-        if (a == 10) {
+        if (a >= BEAM_STOP) {
+            discardBeam(p, s);
+            if (a < BEAM_AFTERGLOW) {
+                level.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), origin.x, origin.y, origin.z, 4, 0.4, 0.4, 0.4, 0.03);
+                level.sendParticles(ModParticles.PURPLE_EMBER.get(), origin.x, origin.y, origin.z, 6, 0.6, 0.6, 0.6, 0.06);
+            } else {
+                s.attack = null;   // the recovery plays out under the move's busy time
+            }
+            return;
+        }
+        if (a == BEAM_START) {
             level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ENDER_DRAGON_SHOOT, SoundSource.PLAYERS, 2.0F, 0.6F);
         }
-        if (a % 15 == 0) {
+        if ((a - BEAM_START) % 15 == 0) {
             level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 0.8F, 1.5F);
         }
 
@@ -427,7 +447,7 @@ public class HeroForm {
             FxUtil.purpleBurst(level, end, 14, 0.8);
         }
 
-        if (a % 5 == 0) {
+        if ((a - BEAM_START) % 5 == 0) {
             AABB box = new AABB(origin, end).inflate(3.0);
             for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, box, e -> validTarget(e, p))) {
                 Vec3 to = e.getBoundingBox().getCenter().subtract(origin);
@@ -442,12 +462,8 @@ public class HeroForm {
                 level.sendParticles(ModParticles.PURPLE_SPARK.get(), c.x, c.y, c.z, 20, 0.4, 0.5, 0.4, 0.4);
             }
         }
-        if (hitBlock && a % 10 == 0) {
+        if (hitBlock && (a - BEAM_START) % 10 == 2) {
             level.explode(p, end.x, end.y, end.z, 2.5F, true, Level.ExplosionInteraction.NONE);
-        }
-        if (a >= 70) {
-            discardBeam(p, s);
-            s.attack = null;
         }
     }
 
