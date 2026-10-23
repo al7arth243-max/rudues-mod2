@@ -337,7 +337,7 @@ public final class TrialManager {
     }
 
     private static void clearBosses(ServerLevel trial) {
-        for (Entity e : new ArrayList<Entity>(trial.getEntities(null, new net.minecraft.world.phys.AABB(-200, -64, -200, 200, 400, 200),
+        for (Entity e : new ArrayList<Entity>(trial.getEntities((Entity) null, new net.minecraft.world.phys.AABB(-200, -64, -200, 200, 400, 200),
                 x -> x instanceof InfernalShadowEntity || x instanceof com.rudues.mod.entity.InfernalHeroEntity
                         || x instanceof com.rudues.mod.entity.FireGeyserEntity || x instanceof com.rudues.mod.entity.ShadowFireballEntity
                         || x instanceof com.rudues.mod.entity.HeroFireballEntity))) {
