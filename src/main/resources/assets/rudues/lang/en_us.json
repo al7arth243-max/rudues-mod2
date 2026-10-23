@@ -1,8 +1,8 @@
 {
   "item.rudues.fire_fiend": "Fire Fiend",
   "item.rudues.fire_fiend.tooltip1": "A tiny fiend of purple flame.",
-  "item.rudues.fire_fiend.tooltip2": "Use it to gain permanent Strength V & Resistance III",
-  "item.rudues.fire_fiend.tooltip3": "and the power of the Skill Wheel (hold R). Immune to fire.",
+  "item.rudues.fire_fiend.tooltip2": "Throw it into a ring of crying obsidian",
+  "item.rudues.fire_fiend.tooltip3": "to open the way to the Infernal Trial.",
   "itemGroup.rudues": "Rudues Mod",
   "entity.rudues.rage_blast": "Rage Blast",
   "entity.rudues.wind_slash": "Violent Gale",
@@ -46,5 +46,19 @@
   "ability.rudues.tree_of_sin": "Tree of Sin",
   "ability.rudues.tree_of_sin.desc": "Summon an axe of living roots, rush an enemy, grab them and carve them with a savage combo.",
   "ability.rudues.heros_rush": "Hero's Rush",
-  "ability.rudues.heros_rush.desc": "Charge and seize an enemy in one hand, slam them into the ground, drag them at a sprint, then hurl them away."
+  "ability.rudues.heros_rush.desc": "Charge and seize an enemy in one hand, slam them into the ground, drag them at a sprint, then hurl them away.",
+  "block.rudues.trial_portal": "Infernal Trial Portal",
+  "block.rudues.embedded_sword": "Embedded Sword",
+  "message.rudues.fire_fiend_hint": "The Fiend writhes. Throw it into a ring of crying obsidian.",
+  "message.rudues.trial_quiet": "The arena is silent. The Fire Fiend's power already has a bearer. Touch the sword to leave.",
+  "message.rudues.trial_join": "You join %s's trial.",
+  "message.rudues.trial_fled": "%s fled the trial. The flames close.",
+  "message.rudues.trial_left": "%s abandoned the trial. Everyone is cast out.",
+  "message.rudues.trial_lost": "%s has fallen. The trial is lost.",
+  "message.rudues.trial_wall": "The flames will not let you leave.",
+  "title.rudues.trial": "The Infernal Trial",
+  "title.rudues.trial_chosen_you": "You have been chosen",
+  "title.rudues.trial_chosen": "%s has been chosen",
+  "title.rudues.trial_won": "The Trial is Won",
+  "title.rudues.trial_won_sub": "The Fire Fiend's power belongs to %s"
 }

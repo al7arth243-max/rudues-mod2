@@ -656,7 +656,18 @@ public class HeroForm {
         }
     }
 
+    /** Tells every client to draw the dragged victim on its back (or stand it back up when target is null). */
+    private static void setDragVisual(ServerLevel level, State s, LivingEntity target) {
+        if (s.avatar != null && level.getEntity(s.avatar) instanceof DemonEntity d) {
+            int id = target == null ? -1 : target.getId();
+            if (d.getDraggedId() != id) {
+                d.setDragged(id, level.getGameTime());
+            }
+        }
+    }
+
     private static void releaseGrab(ServerLevel level, State s) {
+        setDragVisual(level, s, null);
         if (s.grabbed == null) {
             return;
         }
@@ -1095,6 +1106,12 @@ public class HeroForm {
         boolean holding = target != null && target.isAlive() && k < HeroRushData.THROW_TICK;
         if (holding) {
             holdFromHand(p, target, flat, level, k);
+        }
+        // from just before the slam until the throw, the victim is drawn flat on its back, dragged by the neck
+        if (holding && k >= HeroRushData.IMPACT_TICK - 2) {
+            setDragVisual(level, s, target);
+        } else if (k >= HeroRushData.THROW_TICK - 1) {
+            setDragVisual(level, s, null);
         }
 
         // slam: the instant of impact (the animation freezes for a beat here)

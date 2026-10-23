@@ -1,0 +1,13 @@
+{
+  "type": "rudues:infernal_trial",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "rudues:infernal_wastes",
+      "layers": [],
+      "lakes": false,
+      "features": false,
+      "structure_overrides": []
+    }
+  }
+}

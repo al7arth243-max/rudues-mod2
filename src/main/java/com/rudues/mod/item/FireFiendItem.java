@@ -1,16 +1,13 @@
 package com.rudues.mod.item;
 
-import com.rudues.mod.registry.ModParticles;
 import com.rudues.mod.ability.PowerData;
-import com.rudues.mod.ability.HeroForm;
-import net.minecraft.core.particles.ParticleTypes;
+import com.rudues.mod.trial.TrialPortal;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -20,6 +17,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
+/**
+ * The Fire Fiend no longer grants the power by itself: it is the key to the Infernal Trial. Throw it into the
+ * middle of a ring of 12 crying obsidian (built like an End portal frame) to open the way.
+ */
 public class FireFiendItem extends Item {
     public FireFiendItem(Properties properties) {
         super(properties);
@@ -28,36 +29,28 @@ public class FireFiendItem extends Item {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
-
-        if (PowerData.has(player)) {
-            if (!level.isClientSide) {
-                player.displayClientMessage(Component.translatable("message.rudues.already_powered"), true);
-            }
-            return InteractionResultHolder.fail(stack);
-        }
-
         if (!level.isClientSide) {
-            PowerData.grant(player);
-            PowerData.applyEffects(player);
-            if (player instanceof ServerPlayer sp) {
-                HeroForm.sync(sp);
-            }
-            player.displayClientMessage(Component.translatable("message.rudues.power_gained"), true);
-            level.playSound(null, player.getX(), player.getY(), player.getZ(),
-                    SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.0F, 0.7F);
-            level.playSound(null, player.getX(), player.getY(), player.getZ(),
-                    SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 1.0F, 0.6F);
-            if (level instanceof ServerLevel sl) {
-                sl.sendParticles(ModParticles.PURPLE_EMBER.get(), player.getX(), player.getY() + 1.0, player.getZ(),
-                        80, 0.5, 0.9, 0.5, 0.05);
-                sl.sendParticles(ModParticles.PURPLE_EMBER.get(), player.getX(), player.getY() + 1.0, player.getZ(),
-                        60, 0.6, 1.0, 0.6, 0.1);
-            }
-            if (!player.getAbilities().instabuild) {
-                stack.shrink(1);
-            }
+            player.displayClientMessage(Component.translatable(PowerData.has(player)
+                    ? "message.rudues.already_powered" : "message.rudues.fire_fiend_hint").withStyle(ChatFormatting.LIGHT_PURPLE), true);
         }
-        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
+        return InteractionResultHolder.pass(stack);
+    }
+
+    /** While thrown on the ground: if it lies inside a crying obsidian frame, it opens the portal and is consumed. */
+    @Override
+    public boolean onEntityItemUpdate(ItemStack stack, ItemEntity entity) {
+        if (entity.level() instanceof ServerLevel level && entity.tickCount % 4 == 0 && entity.onGround()
+                && TrialPortal.tryActivate(level, entity.blockPosition())) {
+            ItemStack left = stack.copy();
+            left.shrink(1);
+            if (left.isEmpty()) {
+                entity.discard();
+            } else {
+                entity.setItem(left);
+            }
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -68,7 +61,7 @@ public class FireFiendItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("item.rudues.fire_fiend.tooltip1"));
-        tooltip.add(Component.translatable("item.rudues.fire_fiend.tooltip2"));
-        tooltip.add(Component.translatable("item.rudues.fire_fiend.tooltip3"));
+        tooltip.add(Component.translatable("item.rudues.fire_fiend.tooltip2").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("item.rudues.fire_fiend.tooltip3").withStyle(ChatFormatting.GRAY));
     }
 }

@@ -34,6 +34,11 @@ public class DemonEntity extends Entity implements GeoEntity {
             SynchedEntityData.defineId(DemonEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> INTRO =
             SynchedEntityData.defineId(DemonEntity.class, EntityDataSerializers.BOOLEAN);
+    /** Hero's Rush: entity id of the victim being dragged on its back (-1 = none) and the game tick the drag began. */
+    private static final EntityDataAccessor<Integer> DRAGGED =
+            SynchedEntityData.defineId(DemonEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DRAG_START =
+            SynchedEntityData.defineId(DemonEntity.class, EntityDataSerializers.INT);
 
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.infernal_titan.idle");
     private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.infernal_titan.run");
@@ -76,6 +81,20 @@ public class DemonEntity extends Entity implements GeoEntity {
     @Nullable
     public UUID getOwnerUUID() {
         return this.entityData.get(OWNER).orElse(null);
+    }
+
+    /** Server: start (entityId >= 0) or stop (-1) drawing the dragged victim lying on its back. */
+    public void setDragged(int entityId, long gameTime) {
+        this.entityData.set(DRAGGED, entityId);
+        this.entityData.set(DRAG_START, (int) gameTime);
+    }
+
+    public int getDraggedId() {
+        return this.entityData.get(DRAGGED);
+    }
+
+    public int getDragStart() {
+        return this.entityData.get(DRAG_START);
     }
 
     @Nullable
@@ -162,6 +181,8 @@ public class DemonEntity extends Entity implements GeoEntity {
         this.entityData.define(OWNER, Optional.empty());
         this.entityData.define(MOVING, false);
         this.entityData.define(INTRO, true);
+        this.entityData.define(DRAGGED, -1);
+        this.entityData.define(DRAG_START, 0);
     }
 
     @Override

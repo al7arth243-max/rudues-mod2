@@ -30,6 +30,20 @@ public class PowerData {
         root.put(Player.PERSISTED_NBT_TAG, persisted);
     }
 
+    /** Takes the power away again (operator command), including its permanent buffs. */
+    public static void revoke(Player player) {
+        CompoundTag root = player.getPersistentData();
+        CompoundTag persisted = root.getCompound(Player.PERSISTED_NBT_TAG);
+        persisted.remove(KEY);
+        root.put(Player.PERSISTED_NBT_TAG, persisted);
+        for (MobEffect effect : new MobEffect[]{MobEffects.DAMAGE_BOOST, MobEffects.DAMAGE_RESISTANCE}) {
+            MobEffectInstance cur = player.getEffect(effect);
+            if (cur != null && cur.getDuration() == -1) {
+                player.removeEffect(effect);
+            }
+        }
+    }
+
     /** Keeps the permanent buffs active. Temporary stronger buffs (Stand Ground) are left alone. */
     public static void applyEffects(Player player) {
         // Remove the permanent Speed buff that version 1.0 used to give
