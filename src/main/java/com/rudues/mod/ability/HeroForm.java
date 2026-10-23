@@ -455,7 +455,7 @@ public class HeroForm {
     private static void tickPunch(ServerPlayer p, State s, ServerLevel level) {
         int a = s.attackTicks;
         Vec3 look = p.getLookAngle();
-        Vec3 fist = chest(p).add(look.scale(5.2));
+        Vec3 fist = chest(p).add(0, 0.7, 0).add(look.scale(4.0));   // where the fist lands in the animation
         if (a < 9) {
             if (a % 2 == 0) {
                 level.sendParticles(ModParticles.PURPLE_FLAME.get(), fist.x, fist.y, fist.z, 6, 0.6, 0.6, 0.6, 0.02);
@@ -742,8 +742,8 @@ public class HeroForm {
                     return;
                 }
                 double rise = Math.min(1.0, s.mTicks / 8.0);
-                // held in the "right_hand" claw (drawn on the player's left), lifted overhead as he rises
-                holdTarget(p, target, flat, level, 3.4 - 2.0 * rise, -1.0, 4.2 + 2.8 * rise);
+                // hanging by the neck from the "right_hand" claw (drawn on the player's left), hoisted overhead as he rises
+                holdTarget(p, target, flat, level, 3.6 - 3.3 * rise, -0.05 - 1.0 * rise, 2.85 + 3.35 * rise);
                 s.peakY = Math.max(s.peakY, p.getY());
                 if (s.mTicks % 2 == 0) {
                     level.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), p.getX(), p.getY() + 0.5, p.getZ(), 3, 1.0, 0.3, 1.0, 0.02);
@@ -763,7 +763,7 @@ public class HeroForm {
                 p.fallDistance = 0;
                 if (target != null && target.isAlive()) {
                     double drop = Math.min(1.0, s.mTicks / 6.0);
-                    holdTarget(p, target, flat, level, 1.4 + 2.0 * drop, -1.0, 7.0 - 5.95 * drop);
+                    holdTarget(p, target, flat, level, 0.3 + 2.7 * drop, -1.05 - 0.6 * drop, Math.max(0.0, 6.2 - 6.2 * drop));
                 }
                 if (s.mTicks < 4) {
                     p.setDeltaMovement(flat.x * 0.3, -2.8, flat.z * 0.3);
@@ -783,8 +783,8 @@ public class HeroForm {
         Vec3 c = p.position();
         releaseGrab(level, s);
         if (target != null && target.isAlive()) {
-            double lat = -1.0; // under the "right_hand" claw, which is drawn on the player's left
-            double gx = c.x + flat.x * 3.4 + (-flat.z) * lat, gz = c.z + flat.z * 3.4 + flat.x * lat;
+            double lat = -1.7; // under the "right_hand" claw at the moment of impact (drawn on the player's left)
+            double gx = c.x + flat.x * 3.0 + (-flat.z) * lat, gz = c.z + flat.z * 3.0 + flat.x * lat;
             if (target instanceof ServerPlayer tp) {
                 tp.teleportTo(level, gx, c.y, gz, tp.getYRot(), tp.getXRot());
             } else {
@@ -908,7 +908,7 @@ public class HeroForm {
             return;
         }
         // gripped in the "left_hand" claw (drawn on the player's right); the axe is in the other hand
-        holdTarget(p, target, flat, level, 3.2, 1.0, 3.2);
+        holdTarget(p, target, flat, level, 2.6, 1.2, 2.7);   // the animation pins that claw at (2.6, 1.2, 4.2): neck in the claw
         p.fallDistance = 0;
         if (s.mTicks % 3 == 0) {
             level.sendParticles(ModParticles.PURPLE_EMBER.get(), target.getX(), target.getY() + 1.0, target.getZ(), 2, 0.5, 0.6, 0.5, 0.05);
@@ -1050,7 +1050,7 @@ public class HeroForm {
                 hit.setDeltaMovement(Vec3.ZERO);
                 s.mPhase = 22;
                 s.mTicks = 0;
-                rootPlayer(p, 90);
+                rootPlayer(p, HeroRushData.END_TICK + 15);   // covers the whole (longer) drag
                 trigger(p, s, "hr_combo");
                 FxUtil.purpleBurst(level, hit.getBoundingBox().getCenter(), 60, 0.8);
                 level.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.2F, 1.6F);

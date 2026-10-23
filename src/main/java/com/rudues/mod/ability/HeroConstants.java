@@ -15,6 +15,6 @@ public class HeroConstants {
     public static final double CAMERA_EXTRA = 5.0;
 
     /** the breath beam leaves his MOUTH: this high above his feet and this far ahead along the aim */
-    public static final double BEAM_Y = 4.7;        // measured from the beam pose on the current model (mouth at 4.35)
-    public static final double BEAM_FORWARD = 1.95;
+    public static final double BEAM_Y = 5.0;        // measured from the beam pose on the current model (mouth at 4.65 up, 2.1 ahead)
+    public static final double BEAM_FORWARD = 2.4;
 }
