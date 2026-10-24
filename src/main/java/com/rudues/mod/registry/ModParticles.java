@@ -33,4 +33,7 @@ public class ModParticles {
             PARTICLES.register("dark_spark", () -> new SimpleParticleType(false));
     public static final RegistryObject<SimpleParticleType> DARK_EMBER =
             PARTICLES.register("dark_ember", () -> new SimpleParticleType(false));
+    /** dark violet smoke that billows up off big fires */
+    public static final RegistryObject<SimpleParticleType> FIRE_SMOKE =
+            PARTICLES.register("fire_smoke", () -> new SimpleParticleType(false));
 }

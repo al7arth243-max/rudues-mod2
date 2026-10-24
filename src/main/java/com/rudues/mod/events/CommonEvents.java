@@ -110,6 +110,9 @@ public class CommonEvents {
             sp.removeEffect(ModEffects.HERO_OF_HELL.get());
             sp.refreshDimensions();
             HeroForm.sync(sp);
+            if (PowerData.has(sp)) {
+                com.rudues.mod.registry.ModAdvancements.abilitiesGained(sp);      // bearers from before the advancement existed
+            }
         }
     }
 

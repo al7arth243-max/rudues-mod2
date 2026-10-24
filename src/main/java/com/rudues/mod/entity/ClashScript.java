@@ -141,6 +141,27 @@ public final class ClashScript {
         }
     }
 
+    /** clash 2 won: from the grip to the release the Hero hangs by its ankles from the player's hands (the giant swing) */
+    public static boolean heroHeld(int stage, int phase, int result, float t) {
+        return stage == STAGE_POUND && phase == PH_RESOLVE && result == RESULT_WIN
+                && t >= ClashData.POUND_WIN_GRIP && t <= ClashData.POUND_WIN_RELEASE;
+    }
+
+    /** how far the player has turned in the giant swing (degrees of yaw, added to both fighters' facing) */
+    public static float poundSpin(int stage, int phase, int result, float t) {
+        if (stage != STAGE_POUND || phase != PH_RESOLVE || result != RESULT_WIN) {
+            return 0.0F;
+        }
+        return sample(ClashData.POUND_WIN_SPIN, t);
+    }
+
+    /** the held Hero's feet: in the player's hands, in front of them as they turn */
+    public static Vec3 heldHero(Vec3 playerPos, float axisYaw, float t) {
+        float yaw = (axisYaw + 180.0F + sample(ClashData.POUND_WIN_SPIN, t)) * Mth.DEG_TO_RAD;
+        Vec3 fwd = new Vec3(-Mth.sin(yaw), 0, Mth.cos(yaw));
+        return playerPos.add(fwd.scale(sample(ClashData.POUND_WIN_HELD_F, t))).add(0, sample(ClashData.POUND_WIN_HELD_U, t), 0);
+    }
+
     /** a point on the axis at a signed distance from O (+ toward the player's side), h above the ground */
     public static Vec3 along(Vec3 origin, Vec3 u, float a, float h) {
         return origin.add(u.scale(a)).add(0, h, 0);

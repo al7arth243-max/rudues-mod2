@@ -1,0 +1,43 @@
+{
+  "parent": "rudues:root",
+  "display": {
+    "icon": {
+      "item": "minecraft:wither_skeleton_skull"
+    },
+    "title": {
+      "translate": "advancements.rudues.infernal_hero.title"
+    },
+    "description": {
+      "translate": "advancements.rudues.infernal_hero.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "killed": {
+      "trigger": "minecraft:player_killed_entity",
+      "conditions": {
+        "entity": [
+          {
+            "condition": "minecraft:entity_properties",
+            "entity": "this",
+            "predicate": {
+              "type": "rudues:infernal_hero"
+            }
+          }
+        ]
+      }
+    },
+    "won": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "killed",
+      "won"
+    ]
+  ]
+}

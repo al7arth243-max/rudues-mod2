@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import com.rudues.mod.RuduesMod;
 import com.rudues.mod.entity.HeroMoveData;
+import com.rudues.mod.entity.ClashScript;
 import com.rudues.mod.entity.InfernalHeroEntity;
 import com.rudues.mod.network.ClashPacket;
 import net.minecraft.client.renderer.LightTexture;
@@ -51,6 +52,9 @@ public class InfernalHeroRenderer extends GeoEntityRenderer<InfernalHeroEntity> 
             poseStack.translate(delta.x, delta.y, delta.z);
         }
         float spin = entity.spinYaw(partialTick);
+        if (clash != null && ClashClient.scripted(clash)) {
+            spin += ClashScript.poundSpin(clash.stage, clash.phase, clash.result, ClashClient.time(clash, partialTick));   // the giant swing
+        }
         if (spin != 0.0F) {
             poseStack.mulPose(Axis.YP.rotationDegrees(-spin));
         }

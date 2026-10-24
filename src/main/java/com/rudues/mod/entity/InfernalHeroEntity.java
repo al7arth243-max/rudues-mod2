@@ -838,7 +838,20 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
             dHero = (float) (gap * 0.5);
             dPlayer = (float) (gap * 0.5);
         } else if (stage == ClashScript.STAGE_POUND) {
-            origin = groundBelow(hp.add(0, 2, 0));          // the player comes to it: it holds its ground
+            // the player comes to it; in the arena the line is turned so the throw at the end flies inward, and kept
+            // far enough from the edge for the whole of it
+            if (com.rudues.mod.trial.TrialManager.inTrial(this)) {
+                Vec3 flat = new Vec3(hp.x, 0, hp.z);
+                double r = flat.length();
+                if (r > 1.0) {
+                    u = flat.scale(1.0 / r);
+                    axisYaw = ClashScript.yawOf(u);
+                    if (r > 26.0) {
+                        hp = new Vec3(u.x * 26.0, hp.y, u.z * 26.0);
+                    }
+                }
+            }
+            origin = groundBelow(hp.add(0, 2, 0));
         } else {
             origin = groundBelow(hp.add(pp).scale(0.5).add(0, 2, 0));
         }
@@ -879,6 +892,9 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
     }
 
     private Vec3 heroAt(float t) {
+        if (ClashScript.heroHeld(stage, phase, result, t)) {
+            return ClashScript.heldHero(playerAt(t), axisYaw, t);
+        }
         Vec3 u = ClashScript.axis(axisYaw);
         float d = ClashScript.dist(true, stage, phase, result, t, dHero, dPlayer);
         return ClashScript.at(origin, u, true, d, ClashScript.height(true, stage, phase, result, t));
@@ -1049,6 +1065,14 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
                 sl.sendParticles(ModParticles.DARK_FLAME_BIG.get(), c.x, c.y - 1.2, c.z, 40, 2.5, 0.2, 2.5, 0.08);
                 playSound(SoundEvents.GENERIC_EXPLODE, 3.0F, 0.4F);
                 playSound(SoundEvents.ANVIL_LAND, 2.0F, 0.4F);
+            } else if (t == ClashData.POUND_WIN_GRIP) {
+                playSound(SoundEvents.PLAYER_ATTACK_STRONG, 2.0F, 0.5F);
+            } else if (t > ClashData.POUND_WIN_SPIN_FROM && t < ClashData.POUND_WIN_RELEASE) {
+                if (t % 7 == 0) {
+                    playSound(SoundEvents.PLAYER_ATTACK_SWEEP, 2.5F, 0.4F + 0.3F * (t - ClashData.POUND_WIN_SPIN_FROM)
+                            / (float) (ClashData.POUND_WIN_RELEASE - ClashData.POUND_WIN_SPIN_FROM));
+                }
+                sl.sendParticles(ModParticles.DARK_FLAME.get(), getX(), getY() + 1.0, getZ(), 3, 0.6, 0.6, 0.6, 0.01);
             } else if (t == ClashData.POUND_WIN_RELEASE) {
                 sl.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), getX(), getY() + 2, getZ(), 30, 1.5, 1.0, 1.5, 0.2);
                 playSound(SoundEvents.ENDER_DRAGON_FLAP, 3.0F, 0.5F);

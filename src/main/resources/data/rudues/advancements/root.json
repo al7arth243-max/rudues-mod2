@@ -1,0 +1,37 @@
+{
+  "display": {
+    "icon": {
+      "item": "rudues:fire_fiend"
+    },
+    "title": {
+      "translate": "advancements.rudues.root.title"
+    },
+    "description": {
+      "translate": "advancements.rudues.root.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false,
+    "background": "minecraft:textures/block/crying_obsidian.png"
+  },
+  "criteria": {
+    "has_ember": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "rudues:fire_fiend"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_ember"
+    ]
+  ]
+}

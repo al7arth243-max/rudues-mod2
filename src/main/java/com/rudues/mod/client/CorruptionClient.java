@@ -70,4 +70,10 @@ public final class CorruptionClient {
     public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
         IDS.clear();
     }
+
+    /** a new dimension (or respawn): entity ids start over, and the trial's corruption stays behind */
+    @SubscribeEvent
+    public static void onClone(ClientPlayerNetworkEvent.Clone event) {
+        IDS.clear();
+    }
 }

@@ -59,6 +59,7 @@ public class ClientModEvents {
         event.registerSpriteSet(ModParticles.DARK_FLAME_BIG.get(), sprites -> new PurpleParticle.Provider(sprites, PurpleParticle.Kind.FLAME_BIG, true));
         event.registerSpriteSet(ModParticles.DARK_SPARK.get(), sprites -> new PurpleParticle.Provider(sprites, PurpleParticle.Kind.SPARK, true));
         event.registerSpriteSet(ModParticles.DARK_EMBER.get(), sprites -> new PurpleParticle.Provider(sprites, PurpleParticle.Kind.EMBER, true));
+        event.registerSpriteSet(ModParticles.FIRE_SMOKE.get(), sprites -> new PurpleParticle.Provider(sprites, PurpleParticle.Kind.SMOKE));
     }
 
     @SubscribeEvent

@@ -272,11 +272,14 @@ public final class TrialManager {
     }
 
     private static void spawnHero(ServerLevel trial, ServerPlayer chosen, TrialData d) {
+        spawnHero(trial, chosen, d, arenaCentre(trial));
+    }
+
+    private static void spawnHero(ServerLevel trial, ServerPlayer chosen, TrialData d, Vec3 c) {
         com.rudues.mod.entity.InfernalHeroEntity hero = ModEntities.INFERNAL_HERO.get().create(trial);
         if (hero == null) {
             return;
         }
-        Vec3 c = arenaCentre(trial);
         float yaw = yawToward(c, chosen);
         hero.moveTo(c.x, c.y, c.z, yaw, 0.0F);
         hero.setYHeadRot(yaw);
@@ -343,8 +346,31 @@ public final class TrialManager {
         d.setDirty();
         HeroForm.sync(p);
         syncCorruption(server);
-        title(p, Component.translatable("title.rudues.awakened").withStyle(ChatFormatting.DARK_PURPLE),
-                Component.translatable("title.rudues.awakened_sub").withStyle(ChatFormatting.LIGHT_PURPLE));
+        p.displayClientMessage(Component.translatable("title.rudues.awakened_sub").withStyle(ChatFormatting.LIGHT_PURPLE), true);
+    }
+
+    /**
+     * The last clash is won: the Shadow, on one knee, becomes the Infernal Hero where it kneels. Returns false outside a
+     * trial (a test fight), where the Shadow just falls.
+     */
+    public static boolean shadowBecomesHero(InfernalShadowEntity shadow, ServerPlayer p) {
+        MinecraftServer server = shadow.getServer();
+        if (server == null || !inTrial(shadow)) {
+            return false;
+        }
+        TrialData d = TrialData.get(server);
+        if (!d.active || d.stage != STAGE_SHADOW || d.chosen == null) {
+            return false;
+        }
+        ServerPlayer chosen = server.getPlayerList().getPlayer(d.chosen);
+        if (chosen == null) {
+            return false;
+        }
+        Vec3 at = shadow.position();
+        d.boss = null;
+        shadow.discard();
+        spawnHero(trialLevel(server), chosen, d, at);
+        return true;
     }
 
     /** tells everyone in the arena who carries the corruption (the client draws it on their model) */
@@ -420,6 +446,7 @@ public final class TrialManager {
         d.end();
         ServerLevel trial = trialLevel(server);
         clearBosses(trial);
+        syncCorruption(server);          // the borrowed corruption goes with the trial, straight away
         // the borrowed Hero of Hell form goes with the trial
         ServerPlayer chosen = chosenId == null ? null : server.getPlayerList().getPlayer(chosenId);
         if (chosen != null && !PowerData.has(chosen)) {
@@ -452,8 +479,13 @@ public final class TrialManager {
             PowerData.grant(chosen);
             PowerData.applyEffects(chosen);
             HeroForm.sync(chosen);
+            com.rudues.mod.registry.ModAdvancements.abilitiesGained(chosen);
         }
         ServerLevel trial = trialLevel(server);
+        syncCorruption(server);          // the corruption fades once the trial is won
+        for (ServerPlayer p : trial.players()) {
+            com.rudues.mod.registry.ModAdvancements.heroDefeated(p);      // everyone who fought it through to the end
+        }
         ArenaBuilder.placeSword(trial, true);
         String name = chosen == null ? "?" : chosen.getGameProfile().getName();
         for (ServerPlayer p : trial.players()) {

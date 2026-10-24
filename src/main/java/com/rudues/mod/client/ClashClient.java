@@ -180,6 +180,9 @@ public final class ClashClient {
 
     public static Vec3 heroPos(ClashPacket s, float partialTick) {
         float t = time(s, partialTick);
+        if (ClashScript.heroHeld(s.stage, s.phase, s.result, t)) {
+            return ClashScript.heldHero(playerPos(s, partialTick), s.yaw, t);
+        }
         float d = ClashScript.dist(true, s.stage, s.phase, s.result, t, s.dHero, s.dPlayer);
         return ClashScript.at(origin(s), ClashScript.axis(s.yaw), true, d, ClashScript.height(true, s.stage, s.phase, s.result, t));
     }
@@ -259,15 +262,17 @@ public final class ClashClient {
         // end of tick: put the player where the script says next (the frames in between interpolate smoothly)
         Vec3 q = playerPos(s, 1.0F);
         Vec3 u = ClashScript.axis(s.yaw);
-        float yaw = ClashScript.yawOf(u.scale(-1));
+        // (the giant swing turns them round with it)
+        float yaw = ClashScript.yawOf(u.scale(-1)) + ClashScript.poundSpin(s.stage, s.phase, s.result, time(s, 1.0F));
+        float yawO = ClashScript.yawOf(u.scale(-1)) + ClashScript.poundSpin(s.stage, s.phase, s.result, time(s, 0.0F));
         mc.player.setPos(q.x, q.y, q.z);
         mc.player.setDeltaMovement(Vec3.ZERO);
         mc.player.setYRot(yaw);
-        mc.player.yRotO = yaw;
+        mc.player.yRotO = yawO;              // (so the swing turns smoothly between ticks)
         mc.player.setYHeadRot(yaw);
-        mc.player.yHeadRotO = yaw;
+        mc.player.yHeadRotO = yawO;
         mc.player.setYBodyRot(yaw);
-        mc.player.yBodyRotO = yaw;
+        mc.player.yBodyRotO = yawO;
         mc.player.setXRot(0.0F);
         mc.player.xRotO = 0.0F;
         // ease the shown struggle toward the server's
@@ -374,17 +379,22 @@ public final class ClashClient {
                     Vec3 mid = h.lerp(p, 0.5);
                     return new Shot(mid.add(side.scale(13.0)).add(up.scale(4.0)), mid.add(up.scale(1.8)), 64);
                 }
-                if (t < 24) {
+                if (t < 18) {
                     // the two-fisted slam, close
                     Vec3 chest = o.add(u.scale(ClashData.POUND_CHEST_ALONG)).add(up.scale(ClashData.POUND_CHEST_UP));
                     return new Shot(chest.add(side.scale(5.8)).add(u.scale(1.6)).add(up.scale(2.6)), chest.add(up.scale(1.2)), 62);
                 }
-                if (t < ClashData.POUND_WIN_RELEASE + 3) {
-                    // wide and side-on as it is hauled up overhead
-                    return new Shot(p.add(side.scale(12.0)).add(u.scale(-2.5)).add(up.scale(3.6)), p.add(u.scale(-1.5)).add(up.scale(3.6)), 66);
+                if (t < ClashData.POUND_WIN_SPIN_FROM) {
+                    // off it, and by the ankles: side-on
+                    Vec3 c = o.add(u.scale(-1.5));
+                    return new Shot(c.add(side.scale(13.0)).add(up.scale(4.5)).add(u.scale(1.0)), c.add(up.scale(1.8)), 62);
                 }
-                // over the player's shoulder: it flies, lands far off and gets up facing us
-                return new Shot(p.add(u.scale(6.5)).add(side.scale(6.5)).add(up.scale(5.2)), h.add(up.scale(2.2)), 58);
+                if (t < ClashData.POUND_WIN_RELEASE + 2) {
+                    // the giant swing, from high and wide enough to take in the whole circle
+                    return new Shot(p.add(side.scale(15.0)).add(u.scale(5.0)).add(up.scale(11.0)), p.add(up.scale(2.0)), 66);
+                }
+                // over the player's shoulder: it flies a long way, lands and gets up facing us
+                return new Shot(p.add(u.scale(6.5)).add(side.scale(6.5)).add(up.scale(5.6)), h.add(up.scale(2.2)), 54);
             }
         }
     }

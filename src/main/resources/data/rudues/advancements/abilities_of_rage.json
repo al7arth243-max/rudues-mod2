@@ -1,0 +1,28 @@
+{
+  "parent": "rudues:infernal_hero",
+  "display": {
+    "icon": {
+      "item": "minecraft:fire_charge"
+    },
+    "title": {
+      "translate": "advancements.rudues.abilities_of_rage.title"
+    },
+    "description": {
+      "translate": "advancements.rudues.abilities_of_rage.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ]
+}
