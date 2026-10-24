@@ -439,7 +439,7 @@ public final class ClashClient {
         }
     }
 
-    private static Method findCameraMove() {
+    static Method findCameraMove() {
         if (!lookedUp) {
             lookedUp = true;
             for (String name : new String[]{"m_90568_", "move"}) {

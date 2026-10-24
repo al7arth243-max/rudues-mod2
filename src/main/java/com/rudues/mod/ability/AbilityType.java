@@ -12,6 +12,7 @@ public enum AbilityType {
     FIEND_SUMMON("fiend_summon", 200, 7, false),
     VIOLENT_GALE("violent_gale", 50, 4, false),
     STAND_GROUND("stand_ground", 300, 5, false),
+    PUMMEL("pummel", 160, 6, false),
     // ---- Hero of Hell (demon form) moves; they do not fill the gauge
     CONCENTRATED_BEAM("concentrated_beam", 300, 0, true),
     OBLITERATOR_MAXIMUM("obliterator_maximum", 100, 0, true),

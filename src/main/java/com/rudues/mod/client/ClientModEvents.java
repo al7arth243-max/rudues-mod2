@@ -37,6 +37,18 @@ public class ClientModEvents {
         event.registerEntityRenderer(ModEntities.SHADOW_FIREBALL.get(), ShadowFireballRenderer::new);
     }
 
+    /** awakened players wear the Shadow's corruption (both skin models) */
+    @SubscribeEvent
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static void onAddLayers(EntityRenderersEvent.AddLayers event) {
+        for (String skin : event.getSkins()) {
+            net.minecraft.client.renderer.entity.LivingEntityRenderer renderer = event.getSkin(skin);
+            if (renderer instanceof net.minecraft.client.renderer.entity.player.PlayerRenderer pr) {
+                pr.addLayer(new PlayerCorruptionLayer(pr));
+            }
+        }
+    }
+
     @SubscribeEvent
     public static void onParticles(RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(ModParticles.PURPLE_FLAME.get(), sprites -> new PurpleParticle.Provider(sprites, PurpleParticle.Kind.FLAME));

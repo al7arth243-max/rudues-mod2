@@ -79,5 +79,10 @@
   "subtitles.rudues.music": "Boss theme",
   "message.rudues.clash_hold": "Keep it above the line!",
   "message.rudues.clash_won": "CLASH WON",
-  "message.rudues.clash_lost": "OVERPOWERED"
+  "message.rudues.clash_lost": "OVERPOWERED",
+  "ability.rudues.pummel": "Pummel",
+  "ability.rudues.pummel.desc": "Rush the first enemy in front of you and lay into it with six haymakers, left and right, then one huge punch that sends it flying.",
+  "title.rudues.awakened": "Awakened",
+  "title.rudues.awakened_sub": "The corruption is yours - and so is its power",
+  "message.rudues.awakening": "The Shadow's corruption tears its way into you..."
 }

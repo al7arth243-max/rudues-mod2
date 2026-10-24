@@ -195,6 +195,9 @@ public final class TrialManager {
     /** the trial's clock: raises each boss in turn, and keeps one standing if it is ever lost (unloaded, removed) */
     private static void tickTrial(MinecraftServer server) {
         TrialData d = TrialData.get(server);
+        if (server.getTickCount() % 40 == 0) {
+            syncCorruption(server);
+        }
         if (!d.active || d.chosen == null) {
             return;
         }
@@ -302,6 +305,61 @@ public final class TrialManager {
         }
         TrialData d = TrialData.get(server);
         return d.active && p.getUUID().equals(d.chosen) && d.stage >= STAGE_HERO_RISING && inTrial(p);
+    }
+
+    /** the chosen one of the trial being fought where this entity is (null outside the arena or with no trial on) */
+    @Nullable
+    public static ServerPlayer chosenIn(Entity e) {
+        MinecraftServer server = e.getServer();
+        if (server == null || !inTrial(e)) {
+            return null;
+        }
+        TrialData d = TrialData.get(server);
+        ServerPlayer p = d.active && d.chosen != null ? server.getPlayerList().getPlayer(d.chosen) : null;
+        return p != null && inTrial(p) ? p : null;
+    }
+
+    /** the chosen one, once the Shadow's corruption has passed into them: the base moves are theirs for the trial */
+    public static boolean isAwakened(ServerPlayer p) {
+        MinecraftServer server = p.getServer();
+        if (server == null) {
+            return false;
+        }
+        TrialData d = TrialData.get(server);
+        return d.active && d.awakened && p.getUUID().equals(d.chosen) && inTrial(p);
+    }
+
+    /** the awakening has played out: the chosen one now fights the Shadow with the base moves and the corruption */
+    public static void awaken(ServerPlayer p) {
+        MinecraftServer server = p.getServer();
+        if (server == null) {
+            return;
+        }
+        TrialData d = TrialData.get(server);
+        if (!d.active || !p.getUUID().equals(d.chosen) || !inTrial(p) || d.awakened) {
+            return;
+        }
+        d.awakened = true;
+        d.setDirty();
+        HeroForm.sync(p);
+        syncCorruption(server);
+        title(p, Component.translatable("title.rudues.awakened").withStyle(ChatFormatting.DARK_PURPLE),
+                Component.translatable("title.rudues.awakened_sub").withStyle(ChatFormatting.LIGHT_PURPLE));
+    }
+
+    /** tells everyone in the arena who carries the corruption (the client draws it on their model) */
+    private static void syncCorruption(MinecraftServer server) {
+        ServerLevel trial = trialLevel(server);
+        if (trial == null) {
+            return;
+        }
+        TrialData d = TrialData.get(server);
+        ServerPlayer chosen = d.chosen == null ? null : server.getPlayerList().getPlayer(d.chosen);
+        int[] ids = d.active && d.awakened && chosen != null && inTrial(chosen) && !HeroForm.isHero(chosen) ? new int[]{chosen.getId()} : new int[0];
+        for (ServerPlayer p : trial.players()) {
+            com.rudues.mod.network.Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> p),
+                    new com.rudues.mod.network.CorruptPacket(ids));
+        }
     }
 
     /** a boss fell: the Shadow hands over to the Hero, the Hero ends the trial */

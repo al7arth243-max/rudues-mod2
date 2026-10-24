@@ -42,6 +42,10 @@ public class AbilityHandler {
         if (type.hero && !HeroForm.canAct(player)) {
             return; // still busy with the previous demon move
         }
+        if (Pummel.busy(player) || HeroForm.inClash(player)
+                || com.rudues.mod.entity.InfernalShadowEntity.AWAKENING.contains(player.getUUID())) {
+            return;
+        }
         long now = player.level().getGameTime();
         long[] cds = COOLDOWNS.computeIfAbsent(player.getUUID(), k -> new long[AbilityType.values().length]);
         if (now < cds[index]) {
@@ -58,6 +62,7 @@ public class AbilityHandler {
             case FIEND_SUMMON -> fiendSummon(player);
             case VIOLENT_GALE -> violentGale(player);
             case STAND_GROUND -> standGround(player);
+            case PUMMEL -> Pummel.start(player);
             case CONCENTRATED_BEAM, OBLITERATOR_MAXIMUM, HELLFIRE, SLASH_COMBO, METEOR_IMPACT, TREE_OF_SIN, HEROS_RUSH -> HeroForm.beginMove(player, type);
         }
 

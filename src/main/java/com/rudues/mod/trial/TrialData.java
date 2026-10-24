@@ -32,6 +32,8 @@ public class TrialData extends SavedData {
     /** the boss being fought */
     @Nullable
     public UUID boss;
+    /** the chosen one has awakened: the Shadow's corruption is in them, and with it the base moves (until the trial ends) */
+    public boolean awakened;
     /** the one player in this world who carries the Fire Fiend's power */
     @Nullable
     public UUID holder;
@@ -49,6 +51,7 @@ public class TrialData extends SavedData {
         d.stage = tag.getInt("Stage");
         d.timer = tag.getInt("Timer");
         d.boss = tag.hasUUID("Boss") ? tag.getUUID("Boss") : null;
+        d.awakened = tag.getBoolean("Awakened");
         for (Tag t : tag.getList("Participants", Tag.TAG_INT_ARRAY)) {
             d.participants.add(NbtUtils.loadUUID(t));
         }
@@ -67,6 +70,7 @@ public class TrialData extends SavedData {
         }
         tag.putInt("Stage", stage);
         tag.putInt("Timer", timer);
+        tag.putBoolean("Awakened", awakened);
         if (boss != null) {
             tag.putUUID("Boss", boss);
         }
@@ -86,6 +90,7 @@ public class TrialData extends SavedData {
         stage = 0;
         timer = 0;
         boss = null;
+        awakened = false;
         setDirty();
     }
 
@@ -96,6 +101,7 @@ public class TrialData extends SavedData {
         stage = 0;
         timer = 0;
         boss = null;
+        awakened = false;
         setDirty();
     }
 }

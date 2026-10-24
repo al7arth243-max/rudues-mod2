@@ -97,7 +97,8 @@ public class HeroForm {
     // ------------------------------------------------------------------ the Infernal Hero's fight
     /** holds the power, or is borrowing the Hero of Hell form for the trial's last fight */
     public static boolean empowered(net.minecraft.world.entity.player.Player p) {
-        return PowerData.has(p) || (p instanceof ServerPlayer sp && com.rudues.mod.trial.TrialManager.heroGranted(sp));
+        return PowerData.has(p) || (p instanceof ServerPlayer sp
+                && (com.rudues.mod.trial.TrialManager.heroGranted(sp) || com.rudues.mod.trial.TrialManager.isAwakened(sp)));
     }
 
     /** the Hero fights Titan against Titan: whoever it hunts is pulled into the Hero of Hell form */
@@ -166,6 +167,9 @@ public class HeroForm {
 
     // ------------------------------------------------------------------ gauge
     public static void addGauge(ServerPlayer p, int amount) {
+        if (!PowerData.has(p)) {
+            return;         // the moves borrowed in the trial don't build toward the Hero of Hell form
+        }
         State s = state(p);
         if (s.phase != 0 || amount <= 0) {
             return;

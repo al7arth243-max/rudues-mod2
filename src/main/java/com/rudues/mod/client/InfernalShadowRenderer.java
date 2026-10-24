@@ -96,7 +96,12 @@ public class InfernalShadowRenderer extends GeoEntityRenderer<InfernalShadowEnti
     @Override
     public void render(InfernalShadowEntity entity, float entityYaw, float partialTick, PoseStack poseStack,
                        MultiBufferSource bufferSource, int packedLight) {
+        // grabbed by a player's Pummel: drawn tipped over in their hands
+        boolean held = !entity.isPuppet() && PummelClient.apply(entity, partialTick, poseStack);
         super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
+        if (held) {
+            poseStack.popPose();
+        }
         if (entity.getMove() == InfernalShadowEntity.MOVE_HAMMER) {
             renderCircle(entity, partialTick, poseStack, bufferSource);
         } else if (entity.getMove() == InfernalShadowEntity.MOVE_VORTEX) {
@@ -147,8 +152,8 @@ public class InfernalShadowRenderer extends GeoEntityRenderer<InfernalShadowEnti
     /** a shadow of the player: their skin, drained of light */
     @Override
     public Color getRenderColor(InfernalShadowEntity animatable, float partialTick, int packedLight) {
-        if (copiedPlayer(animatable) == null) {
-            return Color.WHITE;
+        if (copiedPlayer(animatable) == null || animatable.isPuppet()) {
+            return Color.WHITE;      // a player's stand-in wears their skin as it is
         }
         return animatable.isPhaseTwo() ? Color.ofRGBA(0.50F, 0.40F, 0.62F, 1.0F) : Color.ofRGBA(0.62F, 0.55F, 0.70F, 1.0F);
     }

@@ -94,6 +94,12 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
     public static final int MOVE_CRESCENT = 6;
     /** at half health: the corruption tears out through its armour (left arm, both legs) and it roars */
     public static final int MOVE_PHASE_SHIFT = 7;
+    /** at a tenth of its health (once): the sword exchange with the player, the punch, and the player's awakening */
+    public static final int MOVE_AWAKEN = 8;
+    /** how long its wounds take to close after the player's roar */
+    public static final double AWAKEN_HEAL_TICKS = 24.0;
+    /** players currently in an awakening (nothing can hurt them while it plays) */
+    public static final Set<UUID> AWAKENING = new HashSet<>();
     /** 1, or 2 once the corruption has taken it */
     private static final EntityDataAccessor<Integer> PHASE =
             SynchedEntityData.defineId(InfernalShadowEntity.class, EntityDataSerializers.INT);
@@ -109,6 +115,11 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
     private static final RawAnimation FIREBALL = RawAnimation.begin().thenPlay("animation.infernal_shadow.fireball_volley");
     private static final RawAnimation CRESCENT = RawAnimation.begin().thenPlay("animation.infernal_shadow.crescent");
     private static final RawAnimation PHASE_SHIFT = RawAnimation.begin().thenPlay("animation.infernal_shadow.phase_shift");
+    private static final RawAnimation AWAKEN_SHADOW = RawAnimation.begin().thenPlay("animation.infernal_shadow.awaken_shadow");
+    // the player's stand-in (PuppetClient) plays these on the same rig
+    private static final RawAnimation AWAKEN_PLAYER = RawAnimation.begin().thenPlayAndHold("animation.infernal_shadow.awaken_player");
+    private static final RawAnimation PUMMEL_RUSH = RawAnimation.begin().thenLoop("animation.infernal_shadow.pummel_rush");
+    private static final RawAnimation PUMMEL = RawAnimation.begin().thenPlayAndHold("animation.infernal_shadow.pummel");
 
     public static final float HELLSCRAPE_DAMAGE = 12.0F;
     public static final float HAMMER_DAMAGE = 16.0F;
@@ -174,6 +185,19 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
     private Vec3 vortexCenter = Vec3.ZERO;
     @Nullable
     private Vec3 homePos;
+    /** the awakening: waiting to start, tick into it, done (it happens once), with whom, and the line it plays on */
+    private boolean pendingAwaken;
+    private int awakenTick = -1;
+    private boolean awakenDone;
+    @Nullable
+    private UUID awakenPlayer;
+    private Vec3 awakenOrigin = Vec3.ZERO;
+    private float awakenYaw;
+    private float awakenFrom;
+    /** client only: a stand-in drawn in a player's place (PuppetClient), never added to the world */
+    private boolean puppet;
+    /** puppet: draw the corruption growths */
+    public boolean puppetCorrupt;
 
     public InfernalShadowEntity(EntityType<? extends InfernalShadowEntity> type, Level level) {
         super(type, level);
@@ -219,7 +243,17 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
     }
 
     public boolean isInMove() {
-        return getMove() != MOVE_NONE;
+        return puppet || getMove() != MOVE_NONE;
+    }
+
+    /** turns this (client-side, never spawned) instance into a stand-in that wears the given player's skin */
+    public void makePuppet(UUID player) {
+        this.puppet = true;
+        this.entityData.set(COPY_OF, Optional.of(player));
+    }
+
+    public boolean isPuppet() {
+        return puppet;
     }
 
     public int getMove() {
@@ -281,6 +315,7 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(0, new PhaseShiftGoal());
+        this.goalSelector.addGoal(0, new AwakenGoal());
         this.goalSelector.addGoal(1, new HellscrapeGoal());
         this.goalSelector.addGoal(1, new HammerGoal());
         this.goalSelector.addGoal(1, new ComboGoal());
@@ -319,6 +354,10 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
         } else {
             if (!isPhaseTwo() && !pendingShift && getMove() != MOVE_PHASE_SHIFT && getHealth() <= getMaxHealth() * 0.5F) {
                 pendingShift = true;
+            }
+            if (isPhaseTwo() && !awakenDone && !pendingAwaken && awakenTick < 0 && getMove() != MOVE_PHASE_SHIFT
+                    && getHealth() <= getMaxHealth() * 0.1F && awakenCandidate() != null) {
+                pendingAwaken = true;
             }
             if (homePos == null) {
                 homePos = position();
@@ -1452,12 +1491,15 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
 
     /** client: draw the growths (not in the first ticks of the shift, while the animation is still blending in) */
     public boolean corruptionShown(float partialTick) {
+        if (puppet) {
+            return puppetCorrupt;
+        }
         return isPhaseTwo() && !(getMove() == MOVE_PHASE_SHIFT && moveTime(partialTick) < 4.0F);
     }
 
     /** client: the netherite over the left arm and the legs is gone (during the shift the animation bursts it off) */
     public boolean armourStripped() {
-        return isPhaseTwo() && getMove() != MOVE_PHASE_SHIFT;
+        return !puppet && isPhaseTwo() && getMove() != MOVE_PHASE_SHIFT;
     }
 
     /** client: how hot the growths' veins burn right now (flares at each eruption and at the roar) */
@@ -1667,12 +1709,288 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
         }
     }
 
+    // ------------------------------------------------------------ the awakening (at a tenth of its health, once)
+    /** the player it would awaken: the one it is fighting, close by and not a Titan */
+    @Nullable
+    private ServerPlayer awakenCandidate() {
+        // in the trial it is always the chosen one, whoever it happens to be fighting
+        ServerPlayer chosen = level().isClientSide ? null : com.rudues.mod.trial.TrialManager.chosenIn(this);
+        LivingEntity who = chosen != null ? chosen : getTarget();
+        if (who instanceof ServerPlayer sp && sp.isAlive() && !sp.isSpectator() && sp.level() == level()
+                && sp.distanceToSqr(this) < 32.0 * 32.0 && !com.rudues.mod.ability.HeroForm.isHero(sp)
+                && !com.rudues.mod.trial.TrialManager.isAwakened(sp)) {
+            return sp;
+        }
+        return null;
+    }
+
+    @Nullable
+    private ServerPlayer awakenTarget() {
+        if (awakenPlayer == null || !(level() instanceof ServerLevel sl)) {
+            return null;
+        }
+        Player p = sl.getPlayerByUUID(awakenPlayer);
+        return p instanceof ServerPlayer sp && sp.isAlive() && sp.level() == level() ? sp : null;
+    }
+
+    private Vec3 awakenAt(double along, double side, double up) {
+        return awakenOrigin.add(forward(awakenYaw).scale(along)).add(right(awakenYaw).scale(side)).add(0, up, 0);
+    }
+
+    private static float sampleAt(float[] a, int t) {
+        return a[Mth.clamp(t, 0, a.length - 1)];
+    }
+
+    /** where the player stands at tick t of the awakening */
+    private Vec3 awakenPlayerPos(int t) {
+        return awakenAt(sampleAt(AwakenData.PLAYER_ALONG, t), 0, sampleAt(AwakenData.PLAYER_H, t));
+    }
+
+    private void startAwaken() {
+        pendingAwaken = false;
+        ServerPlayer p = awakenCandidate();
+        if (p == null) {
+            return;
+        }
+        awakenTick = 0;
+        awakenPlayer = p.getUUID();
+        plannedMove = MOVE_NONE;
+        hitThisMove.clear();
+        getNavigation().stop();
+        setNoGravity(false);
+        clearFire();
+        awakenFrom = getHealth();
+        awakenOrigin = groundAt(position());
+        Vec3 d = p.position().subtract(position()).multiply(1, 0, 1);
+        awakenYaw = d.lengthSqr() < 1.0E-4 ? getYRot() : yawTo(position(), p.position());
+        moveYaw = awakenYaw;
+        setPos(awakenOrigin.x, awakenOrigin.y, awakenOrigin.z);
+        faceYaw(awakenYaw);
+        setDeltaMovement(Vec3.ZERO);
+        // the player is brought to sword's length (a flash of fire covers the cut)
+        Vec3 q = awakenPlayerPos(0);
+        p.teleportTo((ServerLevel) level(), q.x, q.y, q.z, awakenYaw + 180.0F, 0.0F);
+        p.setDeltaMovement(Vec3.ZERO);
+        p.clearFire();
+        AWAKENING.add(p.getUUID());
+        ServerLevel sl = (ServerLevel) level();
+        sl.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), q.x, q.y + 1, q.z, 20, 0.4, 0.8, 0.4, 0.05);
+        sl.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), getX(), getY() + 1, getZ(), 20, 0.4, 0.8, 0.4, 0.05);
+        setMove(MOVE_AWAKEN);
+        triggerAnim("main", "awaken_shadow");
+        com.rudues.mod.network.Network.sendPuppet(p, "awaken_player", AwakenData.END + 4, awakenYaw + 180.0F, true, true);
+        sendAwaken(p, true);
+        playSound(SoundEvents.WITHER_AMBIENT, 1.6F, 0.5F);
+    }
+
+    private void sendAwaken(@Nullable ServerPlayer p, boolean active) {
+        com.rudues.mod.network.AwakenPacket pkt = new com.rudues.mod.network.AwakenPacket(getId(), p == null ? -1 : p.getId(), active,
+                level().getGameTime() - Math.max(0, awakenTick), awakenOrigin.x, awakenOrigin.y, awakenOrigin.z, awakenYaw);
+        com.rudues.mod.network.Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.TRACKING_ENTITY.with(() -> this), pkt);
+        if (p != null) {
+            com.rudues.mod.network.Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> p), pkt);
+        }
+    }
+
+    private void tickAwaken() {
+        ServerPlayer p = awakenTarget();
+        if (p == null) {
+            endAwaken(false);           // they died or left: it may happen again later
+            return;
+        }
+        int t = awakenTick;
+        ServerLevel sl = (ServerLevel) level();
+        setPos(awakenOrigin.x, awakenOrigin.y, awakenOrigin.z);
+        setDeltaMovement(Vec3.ZERO);
+        faceYaw(awakenYaw);
+        p.fallDistance = 0;
+        p.clearFire();
+        // the exchange: every parry rings out and throws sparks where the blades meet
+        for (int i = 0; i < AwakenData.CONTACTS.length; i++) {
+            if (t == AwakenData.CONTACTS[i]) {
+                Vec3 c = awakenAt(AwakenData.CONTACT_PTS[i * 3], AwakenData.CONTACT_PTS[i * 3 + 1], AwakenData.CONTACT_PTS[i * 3 + 2]);
+                sl.sendParticles(ParticleTypes.CRIT, c.x, c.y, c.z, 14, 0.1, 0.1, 0.1, 0.5);
+                sl.sendParticles(ModParticles.PURPLE_SPARK.get(), c.x, c.y, c.z, 12, 0.1, 0.1, 0.1, 0.4);
+                sl.sendParticles(ParticleTypes.FLASH, c.x, c.y, c.z, 1, 0, 0, 0, 0);
+                sl.playSound(null, c.x, c.y, c.z, SoundEvents.ANVIL_LAND, getSoundSource(), 0.7F, 1.7F + random.nextFloat() * 0.2F);
+                sl.playSound(null, c.x, c.y, c.z, SoundEvents.PLAYER_ATTACK_CRIT, getSoundSource(), 1.0F, 0.8F);
+            }
+        }
+        int bind = AwakenData.CONTACTS[AwakenData.CONTACTS.length - 1];
+        if (t > bind && t < AwakenData.BIND_END) {
+            Vec3 c = awakenAt(AwakenData.CONTACT_PTS[9], AwakenData.CONTACT_PTS[10], AwakenData.CONTACT_PTS[11]);
+            sl.sendParticles(t % 2 == 0 ? ModParticles.PURPLE_SPARK.get() : ParticleTypes.CRIT, c.x, c.y, c.z, 3, 0.05, 0.05, 0.05, 0.25);
+            if (t % 6 == 0) {
+                sl.playSound(null, c.x, c.y, c.z, SoundEvents.GRINDSTONE_USE, getSoundSource(), 0.8F, 0.6F);
+            }
+        }
+        if (t == AwakenData.PUNCH) {
+            Vec3 f = awakenAt(AwakenData.FIST[0], AwakenData.FIST[1], AwakenData.FIST[2]);
+            sl.sendParticles(ParticleTypes.EXPLOSION, f.x, f.y, f.z, 1, 0, 0, 0, 0);
+            sl.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), f.x, f.y, f.z, 20, 0.2, 0.2, 0.2, 0.15);
+            sl.playSound(null, f.x, f.y, f.z, SoundEvents.PLAYER_ATTACK_KNOCKBACK, getSoundSource(), 1.6F, 0.6F);
+            sl.playSound(null, f.x, f.y, f.z, SoundEvents.GENERIC_EXPLODE, getSoundSource(), 0.8F, 1.2F);
+        }
+        if (t == AwakenData.LAND) {
+            Vec3 g = awakenPlayerPos(t);
+            sl.sendParticles(ParticleTypes.POOF, g.x, g.y + 0.2, g.z, 14, 0.6, 0.1, 0.6, 0.03);
+            sl.playSound(null, g.x, g.y, g.z, SoundEvents.PLAYER_BIG_FALL, getSoundSource(), 1.2F, 0.8F);
+        }
+        // the corruption tears out of the player: the left arm, then both legs, then the roar
+        Vec3 pp = awakenPlayerPos(t);
+        Vec3 side = right(awakenYaw + 180.0F);
+        if (t == AwakenData.ARM) {
+            Vec3 a = pp.add(side.scale(-0.37)).add(0, 1.2, 0);
+            corruptBurst(sl, a);
+            sl.playSound(null, a.x, a.y, a.z, SoundEvents.AMETHYST_CLUSTER_BREAK, getSoundSource(), 1.6F, 0.5F);
+        }
+        if (t == AwakenData.LEGS) {
+            for (double s : new double[]{-0.13, 0.13}) {
+                corruptBurst(sl, pp.add(side.scale(s)).add(0, 0.4, 0));
+            }
+            sl.playSound(null, pp.x, pp.y, pp.z, SoundEvents.AMETHYST_CLUSTER_BREAK, getSoundSource(), 1.6F, 0.4F);
+        }
+        if (t > AwakenData.ARM && t < AwakenData.ROAR + 30 && t % 3 == 0) {
+            sl.sendParticles(ModParticles.PURPLE_EMBER.get(), pp.x, pp.y + 1.0, pp.z, 4, 0.3, 0.6, 0.3, 0.02);
+        }
+        if (t == AwakenData.ROAR) {
+            sl.playSound(null, pp.x, pp.y, pp.z, SoundEvents.RAVAGER_ROAR, getSoundSource(), 2.2F, 0.75F);
+            sl.playSound(null, pp.x, pp.y, pp.z, SoundEvents.GENERIC_EXPLODE, getSoundSource(), 1.2F, 0.7F);
+            sl.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), pp.x, pp.y + 1.2, pp.z, 40, 0.5, 0.7, 0.5, 0.12);
+            sl.sendParticles(ParticleTypes.EXPLOSION, pp.x, pp.y + 1.0, pp.z, 2, 0.3, 0.3, 0.3, 0.0);
+            // and the Shadow draws the corruption back into itself
+            playSound(SoundEvents.WITHER_AMBIENT, 1.8F, 0.4F);
+        }
+        int age = t - AwakenData.ROAR;
+        if (age >= 0 && age <= 9) {                 // the blast ring rolling out from the player
+            double r = 0.8 + (SHOCKWAVE_RADIUS + 2.0 - 0.8) * Math.sqrt(age / 9.0);
+            int n = (int) (10 + r * 6);
+            for (int i = 0; i < n; i++) {
+                double a = Math.PI * 2 * (i + random.nextDouble() * 0.5) / n;
+                sl.sendParticles(i % 3 == 0 ? ModParticles.PURPLE_FLAME_BIG.get() : ModParticles.PURPLE_FLAME.get(),
+                        pp.x + Math.cos(a) * r, pp.y + 0.15, pp.z + Math.sin(a) * r, 1, 0, 0.05, 0, 0.02);
+            }
+        }
+        // its wounds close: back to full health over the roar
+        if (age >= 0 && age <= AWAKEN_HEAL_TICKS) {
+            float k = (float) (age / AWAKEN_HEAL_TICKS);
+            setHealth(Mth.lerp(k * k * (3 - 2 * k), awakenFrom, getMaxHealth()));
+            if (age % 2 == 0) {
+                sl.sendParticles(ModParticles.DARK_FLAME.get(), getX(), getY() + 1.0, getZ(), 6, 0.35, 0.8, 0.35, 0.03);
+            }
+        }
+        if (t >= AwakenData.END) {
+            com.rudues.mod.trial.TrialManager.awaken(p);
+            endAwaken(true);
+            return;
+        }
+        awakenTick++;
+    }
+
+    private void corruptBurst(ServerLevel sl, Vec3 a) {
+        sl.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), a.x, a.y, a.z, 10, 0.15, 0.15, 0.15, 0.06);
+        sl.sendParticles(ModParticles.PURPLE_SPARK.get(), a.x, a.y, a.z, 14, 0.1, 0.1, 0.1, 0.3);
+        sl.sendParticles(new ItemParticleOption(ParticleTypes.ITEM, new ItemStack(Items.OBSIDIAN)), a.x, a.y, a.z, 12, 0.12, 0.12, 0.12, 0.15);
+        sl.sendParticles(ParticleTypes.LARGE_SMOKE, a.x, a.y, a.z, 4, 0.1, 0.1, 0.1, 0.03);
+    }
+
+    private void endAwaken(boolean done) {
+        ServerPlayer p = awakenTarget();
+        if (awakenPlayer != null) {
+            AWAKENING.remove(awakenPlayer);
+        }
+        if (p != null && !done) {
+            com.rudues.mod.network.Network.sendPuppet(p, "", 0, 0.0F, false, false);
+        }
+        sendAwaken(p, false);
+        awakenTick = -1;
+        awakenDone = done;
+        if (done) {
+            setHealth(getMaxHealth());
+        }
+        cooldown = 20;
+        lastMove = MOVE_NONE;
+        plannedMove = MOVE_NONE;
+        setMove(MOVE_NONE);
+    }
+
+    /** the floor under a point (it stands on it) */
+    private Vec3 groundAt(Vec3 p) {
+        BlockPos.MutableBlockPos pos = BlockPos.containing(p.x, p.y + 0.5, p.z).mutable();
+        for (int i = 0; i < 16; i++) {
+            BlockPos below = pos.below();
+            VoxelShape shape = level().getBlockState(below).getCollisionShape(level(), below);
+            if (!shape.isEmpty()) {
+                return new Vec3(p.x, below.getY() + shape.max(Direction.Axis.Y), p.z);
+            }
+            pos.move(Direction.DOWN);
+        }
+        return p;
+    }
+
+    /** takes over from whatever it is doing (but lets the hammer dive and the fireball flight land first) */
+    private class AwakenGoal extends Goal {
+        AwakenGoal() {
+            setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK, Goal.Flag.JUMP));
+        }
+
+        @Override
+        public boolean canUse() {
+            return pendingAwaken && isAlive() && getMove() != MOVE_HAMMER && getMove() != MOVE_FIREBALL && getMove() != MOVE_PHASE_SHIFT;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return awakenTick >= 0 && isAlive();
+        }
+
+        @Override
+        public boolean isInterruptable() {
+            return false;
+        }
+
+        @Override
+        public boolean requiresUpdateEveryTick() {
+            return true;
+        }
+
+        @Override
+        public void start() {
+            startAwaken();
+        }
+
+        @Override
+        public void tick() {
+            if (awakenTick >= 0) {
+                tickAwaken();
+            }
+        }
+
+        @Override
+        public void stop() {
+            if (awakenTick >= 0) {
+                endAwaken(false);
+            }
+        }
+    }
+
+    @Override
+    public void remove(RemovalReason reason) {
+        if (awakenTick >= 0 && !level().isClientSide) {
+            endAwaken(false);
+        }
+        super.remove(reason);
+    }
+
     // while it is up in the air it cannot be hit, pushed or bumped into (the entity waits on the ground below)
     @Override
     public boolean hurt(DamageSource source, float amount) {
         boolean bypass = source.is(DamageTypeTags.BYPASSES_INVULNERABILITY);
-        if ((isAirborne() || getMove() == MOVE_PHASE_SHIFT) && !bypass) {
+        if ((isAirborne() || getMove() == MOVE_PHASE_SHIFT || getMove() == MOVE_AWAKEN) && !bypass) {
             return false;
+        }
+        if (isPhaseTwo() && !awakenDone && !bypass && !level().isClientSide && amount >= getHealth() && awakenCandidate() != null) {
+            amount = Math.max(0.0F, getHealth() - 1.0F);     // it doesn't fall before the player has awakened
         }
         if (!isPhaseTwo() && !bypass && !level().isClientSide && amount >= getHealth()) {
             amount = Math.max(0.0F, getHealth() - 1.0F);     // it never dies before the corruption takes it
@@ -1726,6 +2044,8 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
                 .triggerableAnim("combo", COMBO).triggerableAnim("vortex", VORTEX).triggerableAnim("vortex_end", VORTEX_END)
                 .triggerableAnim("fireball_volley", FIREBALL).triggerableAnim("crescent", CRESCENT)
                 .triggerableAnim("phase_shift", PHASE_SHIFT)
+                .triggerableAnim("awaken_shadow", AWAKEN_SHADOW).triggerableAnim("awaken_player", AWAKEN_PLAYER)
+                .triggerableAnim("pummel_rush", PUMMEL_RUSH).triggerableAnim("pummel", PUMMEL)
                 .setAnimationSpeedHandler(e -> {
             if (e.isInMove()) {
                 return 1.0;
@@ -1781,6 +2101,7 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
             tag.putUUID("CopyOf", id);
         }
         tag.putInt("Phase", this.entityData.get(PHASE));
+        tag.putBoolean("Awakened", awakenDone);
         if (homePos != null) {
             tag.putDouble("HomeX", homePos.x);
             tag.putDouble("HomeY", homePos.y);
@@ -1797,6 +2118,7 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
         if (tag.contains("Phase")) {
             this.entityData.set(PHASE, Math.max(1, tag.getInt("Phase")));
         }
+        awakenDone = tag.getBoolean("Awakened");
         if (isPhaseTwo()) {
             for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
                 setItemSlot(slot, ItemStack.EMPTY);
