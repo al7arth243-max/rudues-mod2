@@ -42,8 +42,13 @@ public class AbilityHandler {
         if (type.hero && !HeroForm.canAct(player)) {
             return; // still busy with the previous demon move
         }
-        if (Pummel.busy(player) || HeroForm.inClash(player)
+        if (Pummel.busy(player) || HeroForm.inClash(player) || HeroForm.transforming(player) || SemiPrime.transforming(player)
                 || com.rudues.mod.entity.InfernalShadowEntity.AWAKENING.contains(player.getUUID())) {
+            return;
+        }
+        if (type == AbilityType.HERO_OF_HELL && (!PowerData.has(player) || com.rudues.mod.trial.TrialManager.inTrial(player))) {
+            // the trial decides for itself when you fight as the Hero of Hell
+            player.displayClientMessage(Component.translatable("message.rudues.hero_unavailable"), true);
             return;
         }
         long now = player.level().getGameTime();
@@ -63,6 +68,11 @@ public class AbilityHandler {
             case VIOLENT_GALE -> violentGale(player);
             case STAND_GROUND -> standGround(player);
             case PUMMEL -> Pummel.start(player);
+            case HERO_OF_HELL -> {
+                if (!HeroForm.transformByMove(player)) {
+                    cds[index] = now;           // already changing: no cooldown spent
+                }
+            }
             case CONCENTRATED_BEAM, OBLITERATOR_MAXIMUM, HELLFIRE, SLASH_COMBO, METEOR_IMPACT, TREE_OF_SIN, HEROS_RUSH -> HeroForm.beginMove(player, type);
         }
 

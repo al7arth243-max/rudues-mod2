@@ -63,7 +63,7 @@ public final class ClashData {
     public static final float[] POUND_LOSE_PLAYER_H = {0.000F, 0.000F, 0.000F, 0.000F, 0.000F, 0.000F, 0.000F, 0.718F, 1.394F, 1.989F, 2.469F, 2.805F, 2.978F, 2.978F, 2.805F, 2.469F, 1.989F, 1.394F, 0.718F, 0.000F, 0.000F, 0.000F, 0.000F, 0.000F, 0.000F, 0.000F, 0.000F, 0.000F, 0.000F, 0.000F, 0.000F, 0.000F, 0.000F, 0.000F, 0.000F, 0.000F, 0.000F};
     public static final float POUND_HERO_REST = -1.000F, POUND_MOUNT = -4.673F;
     public static final float POUND_FACE_ALONG = -5.477F, POUND_FACE_UP = 1.440F;
-    public static final int POUND_HIT_A = 5, POUND_HIT_B = 15;
+    public static final int POUND_HIT_A = 2, POUND_HIT_B = 9, POUND_PERIOD = 14;
     public static final float POUND_CHIN_ALONG = 0.462F, POUND_CHIN_UP = 4.996F;
     public static final float POUND_CHEST_ALONG = -5.634F, POUND_CHEST_UP = 1.494F;
 }

@@ -82,6 +82,28 @@ public class HeroForm {
         return s != null && s.phase == 2;
     }
 
+    /** in the flame pillar, turning into the demon */
+    public static boolean transforming(net.minecraft.world.entity.player.Player p) {
+        State s = STATES.get(p.getUUID());
+        return s != null && s.phase == 1;
+    }
+
+    /** carries the corruption right now: Semi Prime, or awakened in the trial */
+    public static boolean corrupted(ServerPlayer p) {
+        return SemiPrime.active(p) || com.rudues.mod.trial.TrialManager.isAwakened(p);
+    }
+
+    /** the Hero of Hell move: straight into the flame pillar. False if already transforming or transformed. */
+    public static boolean transformByMove(ServerPlayer p) {
+        State s = state(p);
+        if (s.phase != 0) {
+            return false;
+        }
+        startTransformation(p, s);
+        sync(p);
+        return true;
+    }
+
     public static boolean canAct(ServerPlayer p) {
         State s = STATES.get(p.getUUID());
         return s != null && s.phase == 2 && s.busy <= 0 && !s.clash;
@@ -91,7 +113,7 @@ public class HeroForm {
         State s = STATES.get(p.getUUID());
         int gauge = s == null ? 0 : s.gauge;
         int remaining = (s != null && s.phase == 2) ? Math.max(0, HeroConstants.DEMON_TICKS - s.phaseTicks) : 0;
-        Network.sendState(p, empowered(p), gauge, remaining);
+        Network.sendState(p, empowered(p), gauge, remaining, SemiPrime.engaged(p) ? SemiPrime.left(p) : 0);
     }
 
     // ------------------------------------------------------------------ the Infernal Hero's fight
@@ -108,7 +130,6 @@ public class HeroForm {
         }
         State s = state(p);
         if (s.phase == 0) {
-            s.gauge = HeroConstants.GAUGE_MAX;
             startTransformation(p, s);
             sync(p);
         }
@@ -171,12 +192,14 @@ public class HeroForm {
             return;         // the moves borrowed in the trial don't build toward the Hero of Hell form
         }
         State s = state(p);
-        if (s.phase != 0 || amount <= 0) {
+        if (amount <= 0 || SemiPrime.engaged(p)) {
             return;
         }
         s.gauge = Math.min(HeroConstants.GAUGE_MAX, s.gauge + amount);
         if (s.gauge >= HeroConstants.GAUGE_MAX) {
-            startTransformation(p, s);
+            // a full gauge corrupts you: Semi Prime
+            s.gauge = 0;
+            SemiPrime.begin(p);
         }
         sync(p);
     }
@@ -325,7 +348,6 @@ public class HeroForm {
         cleanupVisuals(p, s);
         s.phase = 0;
         s.phaseTicks = 0;
-        s.gauge = 0;
         s.attack = null;
         s.busy = 0;
         if (natural) {
@@ -649,6 +671,8 @@ public class HeroForm {
                         (p.getRandom().nextDouble() - 0.5) * 0.5, 0.8 + p.getRandom().nextDouble() * 1.2,
                         (p.getRandom().nextDouble() - 0.5) * 0.5, 1.0);
             }
+            // the rendered blast: fireball, mushroom column, shock rings, flash and camera shake
+            com.rudues.mod.network.Network.sendBoom(level, p.getX(), p.getY() + 4.0, p.getZ(), p.getY(), 1.0F);
             level.sendParticles(ModParticles.PURPLE_SPARK.get(), cx, cy, cz, 300, 12.0, 6.0, 12.0, 0.9);
             level.sendParticles(ModParticles.PURPLE_EMBER.get(), cx, cy, cz, 220, 14.0, 6.0, 14.0, 0.15);
             level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, cx, cy - 4.0, cz, 6, 8.0, 0.5, 8.0, 0);

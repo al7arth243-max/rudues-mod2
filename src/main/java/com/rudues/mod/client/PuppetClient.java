@@ -48,6 +48,22 @@ public final class PuppetClient {
         return PUPPETS.containsKey(playerId);
     }
 
+    /** the clip a player's stand-in is playing ("" if none), and how many ticks it has left */
+    public static String clipOf(int playerId) {
+        Puppet pu = PUPPETS.get(playerId);
+        return pu == null ? "" : pu.clip;
+    }
+
+    public static int ticksLeft(int playerId) {
+        Puppet pu = PUPPETS.get(playerId);
+        return pu == null ? 0 : pu.left;
+    }
+
+    public static float yawOf(int playerId) {
+        Puppet pu = PUPPETS.get(playerId);
+        return pu == null ? 0.0F : pu.yaw;
+    }
+
     public static void receive(PuppetPacket m) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) {

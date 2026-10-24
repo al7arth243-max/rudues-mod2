@@ -115,7 +115,7 @@ public final class ClashClient {
                 }
             }
             case ClashScript.PH_STRAIN -> {
-                int k = t % 20;
+                int k = t % ClashData.POUND_PERIOD;
                 if (k == ClashData.POUND_HIT_A || k == ClashData.POUND_HIT_B) {
                     kick(0.45F, 0.12F);
                 }

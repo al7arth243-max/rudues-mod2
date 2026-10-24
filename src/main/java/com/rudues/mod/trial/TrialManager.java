@@ -373,18 +373,39 @@ public final class TrialManager {
         return true;
     }
 
-    /** tells everyone in the arena who carries the corruption (the client draws it on their model) */
-    private static void syncCorruption(MinecraftServer server) {
-        ServerLevel trial = trialLevel(server);
-        if (trial == null) {
-            return;
+    /** sync the corruption straight away (a Semi Prime form began or ended) */
+    public static void syncCorruptionNow(@Nullable MinecraftServer server) {
+        if (server != null) {
+            syncCorruption(server);
         }
+    }
+
+    /**
+     * Tells everyone in each dimension who there carries the corruption (the client draws it on their model): the
+     * trial's awakened chosen one, and anyone in the Semi Prime form. Not while they are the Hero of Hell's demon.
+     */
+    private static void syncCorruption(MinecraftServer server) {
         TrialData d = TrialData.get(server);
         ServerPlayer chosen = d.chosen == null ? null : server.getPlayerList().getPlayer(d.chosen);
-        int[] ids = d.active && d.awakened && chosen != null && inTrial(chosen) && !HeroForm.isHero(chosen) ? new int[]{chosen.getId()} : new int[0];
-        for (ServerPlayer p : trial.players()) {
-            com.rudues.mod.network.Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> p),
-                    new com.rudues.mod.network.CorruptPacket(ids));
+        boolean trialCorrupt = d.active && d.awakened && chosen != null && inTrial(chosen);
+        for (ServerLevel level : server.getAllLevels()) {
+            if (level.players().isEmpty()) {
+                continue;
+            }
+            List<Integer> list = new ArrayList<>();
+            for (ServerPlayer p : level.players()) {
+                if (HeroForm.isHero(p)) {
+                    continue;
+                }
+                if ((trialCorrupt && p == chosen) || com.rudues.mod.ability.SemiPrime.active(p)) {
+                    list.add(p.getId());
+                }
+            }
+            int[] ids = list.stream().mapToInt(Integer::intValue).toArray();
+            for (ServerPlayer p : level.players()) {
+                com.rudues.mod.network.Network.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> p),
+                        new com.rudues.mod.network.CorruptPacket(ids));
+            }
         }
     }
 

@@ -60,6 +60,11 @@ public final class AwakenClient {
     @Nullable
     private static CameraType savedCamera;
     private static boolean cinematic;
+
+    /** the awakening / final clash cinematic owns the camera */
+    public static boolean cinematicActive() {
+        return cinematic;
+    }
     private static float shake, shakeO, flash;
     /** the impact frame: client ticks left of it */
     private static int impact;
@@ -279,7 +284,22 @@ public final class AwakenClient {
             }
             return;
         }
-        if (s.phase == InfernalShadowEntity.P_WIN) {
+        if (s.phase == InfernalShadowEntity.P_STRAIN) {
+            // the brawl's blows
+            int bt = t % FinalData.BRAWL_LEN;
+            for (int i = 0; i < FinalData.BRAWL_T.length; i++) {
+                if (FinalData.BRAWL_T[i] == bt) {
+                    switch (FinalData.BRAWL_KIND[i]) {
+                        case 0 -> kick(0.65F, 0.12F);
+                        case 1 -> kick(0.35F, 0.05F);
+                        case 3 -> kick(0.9F, 0.35F);
+                        case 4 -> kick(0.5F, 0.0F);
+                        default -> {
+                        }
+                    }
+                }
+            }
+        } else if (s.phase == InfernalShadowEntity.P_WIN) {
             if (t == FinalData.IMPACT) {
                 impact = 4;                 // the impact frame
                 kick(1.6F, 0.0F);
@@ -349,9 +369,11 @@ public final class AwakenClient {
                 return new Shot(o.add(side.scale(5.5 - 1.5 * k)).add(up.scale(0.7)), m, 64);
             }
             case InfernalShadowEntity.P_STRAIN -> {
-                float a = 0.25F * Mth.sin(t * 0.035F);
+                // the brawl: wide enough for both, drifting round them
+                float a = 0.45F * Mth.sin(t * 0.03F);
                 Vec3 sd = side.scale(Mth.cos(a)).add(u.scale(Mth.sin(a)));
-                return new Shot(m.add(sd.scale(3.8)).add(up.scale(0.4)), m, 56);
+                Vec3 look = o.add(up.scale(1.15));
+                return new Shot(look.add(sd.scale(4.6)).add(up.scale(0.5 + 0.2 * Mth.sin(t * 0.05F))), look, 60);
             }
             case InfernalShadowEntity.P_WIN -> {
                 if (t < FinalData.IMPACT + FinalData.HITSTOP + 2) {

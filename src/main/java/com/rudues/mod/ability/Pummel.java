@@ -66,7 +66,7 @@ public final class Pummel {
     }
 
     private static boolean corrupt(ServerPlayer p) {
-        return com.rudues.mod.trial.TrialManager.isAwakened(p);
+        return HeroForm.corrupted(p);
     }
 
     public static void start(ServerPlayer p) {

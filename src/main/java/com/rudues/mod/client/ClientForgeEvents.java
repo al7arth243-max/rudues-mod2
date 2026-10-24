@@ -52,6 +52,10 @@ public class ClientForgeEvents {
         if (ClientPowerState.heroTicks > 0) {
             ClientPowerState.heroTicks--;
         }
+        // (the power-up itself does not count down: the server sends the full time while it plays)
+        if (ClientPowerState.semiTicks > 0 && ClientPowerState.semiTicks < com.rudues.mod.ability.SemiPrime.DURATION) {
+            ClientPowerState.semiTicks--;
+        }
         if (ClientPowerState.hasPowers && mc.player.isOnFire()) {
             mc.player.clearFire();
         }

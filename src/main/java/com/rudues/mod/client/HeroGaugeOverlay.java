@@ -23,7 +23,8 @@ public class HeroGaugeOverlay implements IGuiOverlay {
         int y = height - gui.leftHeight + 2;
 
         boolean hero = ClientPowerState.isHero();
-        boolean full = !hero && ClientPowerState.gauge >= 100;
+        boolean semi = !hero && ClientPowerState.isSemiPrime();
+        boolean full = !hero && !semi && ClientPowerState.gauge >= 100;
         float frac = Math.max(0.0F, Math.min(1.0F, ClientPowerState.fraction()));
         float pulse = (float) (0.5 + 0.5 * Math.sin((mc.level == null ? 0 : mc.level.getGameTime() + partialTick) * 0.4));
 
@@ -31,6 +32,10 @@ public class HeroGaugeOverlay implements IGuiOverlay {
         if (hero || full) {
             int v = (int) (170 + 85 * pulse);
             fillColor = 0xFF000000 | (v << 16) | (90 << 8) | 0xFF;
+        } else if (semi) {
+            // molten veins: the corruption's own violet, throbbing
+            int v = (int) (120 + 60 * pulse);
+            fillColor = 0xFF000000 | (v << 16) | (40 << 8) | (int) (200 + 55 * pulse);
         } else {
             fillColor = 0xFFB040FF;
         }
@@ -47,6 +52,10 @@ public class HeroGaugeOverlay implements IGuiOverlay {
             int secs = ClientPowerState.heroTicks / 20;
             g.drawString(font, Component.translatable("gui.rudues.hero_of_hell").append(" " + secs + "s"),
                     x, y - 20, 0xFF70FF, true);
+        } else if (semi) {
+            int secs = ClientPowerState.semiTicks / 20;
+            g.drawString(font, Component.translatable("gui.rudues.semi_prime").append(" " + secs + "s"),
+                    x, y - 20, 0xC060FF, true);
         }
         gui.leftHeight += 10;
     }

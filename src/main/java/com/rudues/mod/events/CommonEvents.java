@@ -43,6 +43,7 @@ public class CommonEvents {
             PowerData.applyEffects(sp);
         }
         HeroForm.tick(sp);
+        com.rudues.mod.ability.SemiPrime.tick(sp);
     }
 
     /** While transformed the player's hitbox becomes demon-sized (both client and server run this). */
@@ -71,7 +72,8 @@ public class CommonEvents {
             event.setCanceled(true);
         }
         // nothing touches a player while the Shadow's awakening plays out
-        if (event.getEntity() instanceof Player player && com.rudues.mod.entity.InfernalShadowEntity.AWAKENING.contains(player.getUUID())
+        if (event.getEntity() instanceof Player player && (com.rudues.mod.entity.InfernalShadowEntity.AWAKENING.contains(player.getUUID())
+                    || com.rudues.mod.ability.SemiPrime.transforming(player))
                 && !event.getSource().is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
             event.setCanceled(true);
         }
@@ -99,6 +101,7 @@ public class CommonEvents {
     public static void onDeath(LivingDeathEvent event) {
         if (event.getEntity() instanceof ServerPlayer sp) {
             HeroForm.cleanup(sp);
+            com.rudues.mod.ability.SemiPrime.cleanup(sp);
             com.rudues.mod.ability.Pummel.cancel(sp);
         }
     }
@@ -140,6 +143,7 @@ public class CommonEvents {
         AbilityHandler.clear(event.getEntity().getUUID());
         if (event.getEntity() instanceof ServerPlayer sp) {
             HeroForm.cleanup(sp);
+            com.rudues.mod.ability.SemiPrime.cleanup(sp);
             com.rudues.mod.ability.Pummel.cancel(sp);
         }
     }

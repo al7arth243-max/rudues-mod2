@@ -127,6 +127,7 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
     // the last clash: both fighters play these
     private static final RawAnimation FINAL_CHARGE = RawAnimation.begin().thenPlayAndHold("animation.infernal_shadow.final_charge");
     private static final RawAnimation FINAL_STRAIN = RawAnimation.begin().thenLoop("animation.infernal_shadow.final_strain");
+    private static final RawAnimation FINAL_STRAIN_P = RawAnimation.begin().thenLoop("animation.infernal_shadow.final_strain_p");
     private static final RawAnimation FINAL_WIN = RawAnimation.begin().thenPlayAndHold("animation.infernal_shadow.final_win");
     private static final RawAnimation FINAL_FALL = RawAnimation.begin().thenPlayAndHold("animation.infernal_shadow.final_fall");
     private static final RawAnimation FINAL_LOSE = RawAnimation.begin().thenPlayAndHold("animation.infernal_shadow.final_lose");
@@ -210,6 +211,8 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
     private float awakenFrom;
     private float gauge;
     private int holdTicks, pressesThisTick;
+    /** the final clash's outcome once the mash has decided it (1 won, -1 lost): it plays at the brawl's next pause */
+    private int finalDecided;
     private boolean awakenDone, finalDone;
     /** client only: a stand-in drawn in a player's place (PuppetClient), never added to the world */
     private boolean puppet;
@@ -1876,7 +1879,7 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
             case P_HOLD -> new String[]{"awaken_shadow_hold", "awaken_player_hold"};
             case P_B -> new String[]{"awaken_shadow_b", "awaken_player_b"};
             case P_CHARGE -> new String[]{"final_charge", "final_charge"};
-            case P_STRAIN -> new String[]{"final_strain", "final_strain"};
+            case P_STRAIN -> new String[]{"final_strain", "final_strain_p"};
             case P_WIN -> new String[]{"final_fall", "final_win"};
             case P_LOSE -> new String[]{"final_win", "final_lose"};
             default -> new String[]{null, null};
@@ -1889,7 +1892,7 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
             case P_HOLD -> AWAKEN_HOLD_MAX + 40;
             case P_B -> AwakenData.END_B + 4;
             case P_CHARGE -> FinalData.MEET + 4;
-            case P_STRAIN -> com.rudues.mod.entity.ClashScript.STRAIN_TICKS_PUNCH + 20;
+            case P_STRAIN -> com.rudues.mod.entity.ClashScript.STRAIN_TICKS_PUNCH + FinalData.BRAWL_LEN + 20;
             case P_WIN -> FinalData.WIN_END + TRANSFORM_TICKS + 10;
             case P_LOSE -> FinalData.LOSE_END + 2;
             default -> 0;
@@ -1899,9 +1902,16 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
         } else if (phase == P_WAIT) {
             com.rudues.mod.network.Network.sendPuppet(p, "", 0, 0.0F, false, false);
         }
+        // the last clash is fist and claw: the Shadow puts its sword away for it
+        if (phase == P_CHARGE && scene == SCENE_FINAL) {
+            setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        } else if (phase == P_WAIT) {
+            restoreSword();
+        }
         if (phase == P_STRAIN) {
             gauge = 0.5F;
             holdTicks = 0;
+            finalDecided = 0;
         } else if (phase == P_HOLD) {
             gauge = 0.0F;
         }
@@ -2096,27 +2106,46 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
                 }
             }
             case P_STRAIN -> {
-                sl.sendParticles(t % 2 == 0 ? ModParticles.PURPLE_SPARK.get() : ModParticles.DARK_SPARK.get(), meet.x, meet.y, meet.z, 3, 0.2, 0.3, 0.2, 0.35);
-                if (t % 3 == 0) {
-                    sl.sendParticles(ModParticles.PURPLE_FLAME.get(), meet.x, meet.y, meet.z, 2, 0.1, 0.1, 0.1, 0.05);
+                // the brawl: every blow that lands, is blocked, or meets air
+                int bt = t % FinalData.BRAWL_LEN;
+                for (int i = 0; i < FinalData.BRAWL_T.length; i++) {
+                    if (FinalData.BRAWL_T[i] == bt) {
+                        brawlBlow(p, sl, FinalData.BRAWL_KIND[i], FinalData.BRAWL_WHO[i],
+                                sceneAt(FinalData.BRAWL_AT[i * 3], FinalData.BRAWL_AT[i * 3 + 1], FinalData.BRAWL_AT[i * 3 + 2]));
+                    }
                 }
-                if (t % 10 == 0) {
-                    playSound(SoundEvents.ANVIL_PLACE, 1.0F, 0.6F);
+                if (t % 4 == 0) {
+                    // both left arms smoulder, the player's violet, the Shadow's black
+                    Vec3 pc = scenePlayerPos(t).add(0, 1.2, 0), sc = sceneShadowPos(t).add(0, 1.2, 0);
+                    sl.sendParticles(ModParticles.PURPLE_EMBER.get(), pc.x, pc.y, pc.z, 1, 0.3, 0.4, 0.3, 0.02);
+                    sl.sendParticles(ModParticles.DARK_EMBER.get(), sc.x, sc.y, sc.z, 1, 0.3, 0.4, 0.3, 0.02);
                 }
                 int delay = com.rudues.mod.entity.ClashScript.PROMPT_DELAY;
-                if (t >= delay) {
-                    gauge = Math.max(0.0F, gauge - com.rudues.mod.entity.ClashScript.DECAY_PUNCH);
-                    holdTicks = gauge >= LINE ? holdTicks + 1 : Math.max(0, holdTicks - 3);
+                if (finalDecided == 0) {
+                    if (t >= delay) {
+                        gauge = Math.max(0.0F, gauge - com.rudues.mod.entity.ClashScript.DECAY_PUNCH);
+                        holdTicks = gauge >= LINE ? holdTicks + 1 : Math.max(0, holdTicks - 3);
+                    }
+                    if (holdTicks >= com.rudues.mod.entity.ClashScript.HOLD_TICKS) {
+                        finalDecided = 1;
+                    } else if (t >= com.rudues.mod.entity.ClashScript.STRAIN_TICKS_PUNCH) {
+                        finalDecided = gauge >= LINE ? 1 : -1;
+                    } else if (gauge <= 0.0F && t >= delay) {
+                        finalDecided = -1;
+                    }
                 }
                 if (t % 2 == 0) {
                     sendScene(p, true);
                 }
-                if (holdTicks >= com.rudues.mod.entity.ClashScript.HOLD_TICKS) {
-                    resolveFinal(p, sl, true);
-                } else if (t >= com.rudues.mod.entity.ClashScript.STRAIN_TICKS_PUNCH) {
-                    resolveFinal(p, sl, gauge >= LINE);
-                } else if (gauge <= 0.0F && t >= delay) {
-                    resolveFinal(p, sl, false);
+                // decided: the finishing blow comes the next time both stand squared up (so the brawl flows into it)
+                if (finalDecided != 0) {
+                    boolean pause = false;
+                    for (int s0 : FinalData.BRAWL_SYNC) {
+                        pause |= s0 == bt;
+                    }
+                    if (pause || t >= com.rudues.mod.entity.ClashScript.STRAIN_TICKS_PUNCH + FinalData.BRAWL_LEN) {
+                        resolveFinal(p, sl, finalDecided > 0);
+                    }
                 }
             }
             case P_WIN -> {
@@ -2199,10 +2228,59 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
 
     private void resolveFinal(ServerPlayer p, ServerLevel sl, boolean won) {
         Vec3 m = sceneAt(0, 0, FinalData.FIST_U);
-        sl.sendParticles(ParticleTypes.EXPLOSION_EMITTER, m.x, m.y, m.z, 1, 0, 0, 0, 0);
-        sl.sendParticles(won ? ModParticles.PURPLE_FLAME_BIG.get() : ModParticles.DARK_FLAME_BIG.get(), m.x, m.y, m.z, 40, 0.5, 0.8, 0.5, 0.3);
-        playSound(SoundEvents.GENERIC_EXPLODE, 2.5F, 0.5F);
+        sl.sendParticles(won ? ModParticles.PURPLE_FLAME_BIG.get() : ModParticles.DARK_FLAME_BIG.get(), m.x, m.y, m.z, 20, 0.4, 0.6, 0.4, 0.2);
+        playSound(SoundEvents.ENDER_DRAGON_FLAP, 1.6F, 0.8F);
         setScenePhase(won ? P_WIN : P_LOSE, p);
+    }
+
+    /** one blow of the brawl: kind 0 lands, 1 is blocked, 2 meets air, 3 claws collide, 4 strikes the ground; who 0 the Shadow, 1 the player */
+    private void brawlBlow(ServerPlayer p, ServerLevel sl, int kind, int who, Vec3 at) {
+        net.minecraft.core.particles.ParticleOptions flame = who == 0 ? ModParticles.DARK_FLAME_BIG.get() : ModParticles.PURPLE_FLAME_BIG.get();
+        net.minecraft.core.particles.ParticleOptions spark = who == 0 ? ModParticles.DARK_SPARK.get() : ModParticles.PURPLE_SPARK.get();
+        switch (kind) {
+            case 0 -> {
+                sl.sendParticles(flame, at.x, at.y, at.z, 14, 0.15, 0.15, 0.15, 0.18);
+                sl.sendParticles(spark, at.x, at.y, at.z, 16, 0.1, 0.1, 0.1, 0.45);
+                sl.sendParticles(ParticleTypes.CRIT, at.x, at.y, at.z, 8, 0.1, 0.1, 0.1, 0.4);
+                playSound(SoundEvents.PLAYER_ATTACK_STRONG, 2.0F, 0.6F);
+                playSound(SoundEvents.PLAYER_ATTACK_KNOCKBACK, 1.6F, 0.7F);
+                if (who == 0) {
+                    playSound(SoundEvents.PLAYER_HURT, 1.0F, 0.8F);
+                } else {
+                    playSound(SoundEvents.WITHER_HURT, 0.9F, 0.9F);
+                }
+            }
+            case 1 -> {
+                sl.sendParticles(spark, at.x, at.y, at.z, 20, 0.08, 0.08, 0.08, 0.5);
+                sl.sendParticles(ParticleTypes.ENCHANTED_HIT, at.x, at.y, at.z, 8, 0.1, 0.1, 0.1, 0.3);
+                playSound(SoundEvents.SHIELD_BLOCK, 1.6F, 0.6F);
+                playSound(SoundEvents.PLAYER_ATTACK_NODAMAGE, 1.4F, 0.6F);
+            }
+            case 2 -> {
+                sl.sendParticles(ParticleTypes.SWEEP_ATTACK, at.x, at.y, at.z, 1, 0, 0, 0, 0);
+                sl.sendParticles(flame, at.x, at.y, at.z, 4, 0.2, 0.1, 0.2, 0.04);
+                playSound(SoundEvents.PLAYER_ATTACK_SWEEP, 1.4F, 0.7F);
+            }
+            case 3 -> {
+                sl.sendParticles(ParticleTypes.EXPLOSION, at.x, at.y, at.z, 1, 0, 0, 0, 0);
+                sl.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), at.x, at.y, at.z, 16, 0.2, 0.5, 0.2, 0.2);
+                sl.sendParticles(ModParticles.DARK_FLAME_BIG.get(), at.x, at.y, at.z, 16, 0.2, 0.5, 0.2, 0.2);
+                sl.sendParticles(ModParticles.PURPLE_SPARK.get(), at.x, at.y, at.z, 20, 0.1, 0.1, 0.1, 0.6);
+                playSound(SoundEvents.GENERIC_EXPLODE, 1.4F, 0.9F);
+                playSound(SoundEvents.ANVIL_LAND, 1.2F, 0.7F);
+            }
+            case 4 -> {
+                BlockState below = level().getBlockState(BlockPos.containing(at.x, at.y - 0.5, at.z));
+                if (!below.isAir()) {
+                    sl.sendParticles(new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, below), at.x, at.y, at.z, 24, 0.4, 0.05, 0.4, 0.15);
+                }
+                sl.sendParticles(flame, at.x, at.y, at.z, 12, 0.5, 0.05, 0.5, 0.06);
+                playSound(SoundEvents.GENERIC_EXPLODE, 0.9F, 1.2F);
+                playSound(SoundEvents.PLAYER_ATTACK_SWEEP, 1.4F, 0.5F);
+            }
+            default -> {
+            }
+        }
     }
 
     /** the left forearm burning, from its elbow to its fist (points in the player's frame, per tick) */
@@ -2241,7 +2319,14 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
         sl.sendParticles(ParticleTypes.LARGE_SMOKE, a.x, a.y, a.z, 4, 0.1, 0.1, 0.1, 0.03);
     }
 
+    private void restoreSword() {
+        if (getMainHandItem().isEmpty()) {
+            setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.NETHERITE_SWORD));
+        }
+    }
+
     private void endScene(boolean done) {
+        restoreSword();
         ServerPlayer p = scenePlayer();
         if (scenePlayerId != null) {
             AWAKENING.remove(scenePlayerId);
@@ -2407,7 +2492,7 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
                 .triggerableAnim("awaken_shadow_a", AWAKEN_SHADOW_A).triggerableAnim("awaken_shadow_hold", AWAKEN_SHADOW_HOLD)
                 .triggerableAnim("awaken_shadow_b", AWAKEN_SHADOW_B).triggerableAnim("awaken_player_a", AWAKEN_PLAYER_A)
                 .triggerableAnim("awaken_player_hold", AWAKEN_PLAYER_HOLD).triggerableAnim("awaken_player_b", AWAKEN_PLAYER_B)
-                .triggerableAnim("final_charge", FINAL_CHARGE).triggerableAnim("final_strain", FINAL_STRAIN)
+                .triggerableAnim("final_charge", FINAL_CHARGE).triggerableAnim("final_strain", FINAL_STRAIN).triggerableAnim("final_strain_p", FINAL_STRAIN_P)
                 .triggerableAnim("final_win", FINAL_WIN).triggerableAnim("final_fall", FINAL_FALL).triggerableAnim("final_lose", FINAL_LOSE)
                 .triggerableAnim("pummel_rush", PUMMEL_RUSH).triggerableAnim("pummel", PUMMEL)
                 .setAnimationSpeedHandler(e -> {

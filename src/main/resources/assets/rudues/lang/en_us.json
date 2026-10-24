@@ -34,7 +34,7 @@
   "message.rudues.power_gained": "The power of Rage surges through you!",
   "message.rudues.already_powered": "You already carry the power of Rage.",
   "message.rudues.cooldown": "%s is recharging (%ss)",
-  "message.rudues.hero_awakened": "The gauge is full... the Hero of Hell awakens!",
+  "message.rudues.hero_awakened": "The Hero of Hell awakens!",
   "message.rudues.hero_ended": "The Hero of Hell form fades.",
   "gui.rudues.hero_of_hell": "Hero of Hell",
   "gui.rudues.selected": "selected",
@@ -92,5 +92,11 @@
   "advancements.rudues.abilities_of_rage.description": "Earn the power of Rage and its abilities",
   "title.rudues.embrace": "Embrace your truth",
   "message.rudues.awaken_qte": "AWAKEN",
-  "message.rudues.final_clash": "FINAL CLASH"
+  "message.rudues.final_clash": "FINAL CLASH",
+  "ability.rudues.hero_of_hell": "Hero of Hell",
+  "ability.rudues.hero_of_hell.desc": "Erupt in a pillar of purple flame and become the Hero of Hell for 60 seconds.",
+  "message.rudues.hero_unavailable": "The Hero of Hell will not answer here.",
+  "message.rudues.semi_prime": "The gauge is full... the corruption takes you. Semi Prime!",
+  "message.rudues.semi_prime_ended": "The corruption recedes. Semi Prime fades.",
+  "gui.rudues.semi_prime": "Semi Prime"
 }

@@ -13,6 +13,8 @@ public enum AbilityType {
     VIOLENT_GALE("violent_gale", 50, 4, false),
     STAND_GROUND("stand_ground", 300, 5, false),
     PUMMEL("pummel", 160, 6, false),
+    /** transform into the Hero of Hell (was the gauge's reward; the gauge now leads to Semi Prime) */
+    HERO_OF_HELL("hero_of_hell", 4000, 0, false),
     // ---- Hero of Hell (demon form) moves; they do not fill the gauge
     CONCENTRATED_BEAM("concentrated_beam", 300, 0, true),
     OBLITERATOR_MAXIMUM("obliterator_maximum", 100, 0, true),

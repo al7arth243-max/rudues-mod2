@@ -967,7 +967,7 @@ public class InfernalHeroEntity extends Monster implements GeoEntity {
                 }
                 if (stage == ClashScript.STAGE_POUND) {
                     // every blow lands on its guard
-                    int k = t % 20;
+                    int k = t % ClashData.POUND_PERIOD;
                     if (k == ClashData.POUND_HIT_A || k == ClashData.POUND_HIT_B) {
                         Vec3 f = poundFace(u);
                         sl.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), f.x, f.y, f.z, 8, 0.3, 0.2, 0.3, 0.12);
