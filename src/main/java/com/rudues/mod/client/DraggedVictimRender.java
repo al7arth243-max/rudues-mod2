@@ -64,12 +64,25 @@ public class DraggedVictimRender {
             return;
         }
         LivingEntity victim = event.getEntity();
+        if (apply(victim, event.getPartialTick(), event.getPoseStack())) {
+            PUSHED.add(victim.getId());
+        }
+    }
+
+    /**
+     * Pushes the "lying on its back, dragged by the neck" transform when this victim is being dragged. Returns true
+     * when it pushed (the caller pops after drawing). GeckoLib renderers do not fire RenderLivingEvent, so the
+     * Infernal bosses call this from their own render().
+     */
+    public static boolean apply(LivingEntity victim, float pt, PoseStack ps) {
+        if (DRAGGED.isEmpty()) {
+            return false;
+        }
         Drag drag = DRAGGED.get(victim.getId());
         Minecraft mc = Minecraft.getInstance();
         if (drag == null || mc.level == null) {
-            return;
+            return false;
         }
-        float pt = event.getPartialTick();
         float lay = Mth.clamp(((int) mc.level.getGameTime() - drag.start() + pt) / LAY_TICKS, 0.0F, 1.0F);
         lay = lay * lay * (3.0F - 2.0F * lay);
 
@@ -84,9 +97,7 @@ public class DraggedVictimRender {
 
         float h = victim.getBbHeight();
         float w = victim.getBbWidth();
-        PoseStack ps = event.getPoseStack();
         ps.pushPose();
-        PUSHED.add(victim.getId());
         // neck in his claw (the entity's position), feet trailing behind, back resting on the ground
         ps.translate(-fx * h * NECK * lay, w * 0.5F * lay, -fz * h * NECK * lay);
         // tip over around the sideways axis so the head points the way he runs
@@ -96,6 +107,7 @@ public class DraggedVictimRender {
         ps.mulPose(Axis.YP.rotationDegrees(Mth.wrapDegrees(bodyYaw - (runYaw + 180.0F)) * lay));
         // a body being dragged does not walk
         victim.walkAnimation.setSpeed(0.0F);
+        return true;
     }
 
     @SubscribeEvent

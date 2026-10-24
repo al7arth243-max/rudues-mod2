@@ -58,8 +58,13 @@ public class InfernalHeroRenderer extends GeoEntityRenderer<InfernalHeroEntity> 
         if (spin != 0.0F) {
             poseStack.mulPose(Axis.YP.rotationDegrees(-spin));
         }
+        // caught by Hero's Rush: drawn on his back, dragged by the neck
+        boolean dragged = DraggedVictimRender.apply(entity, partialTick, poseStack);
         // dark obsidian: drawn fully lit like the player's own Titan, so it never goes black
         super.render(entity, entityYaw, partialTick, poseStack, buffers, LightTexture.FULL_BRIGHT);
+        if (dragged) {
+            poseStack.popPose();
+        }
         poseStack.popPose();
         if (entity.getMove() == InfernalHeroEntity.MOVE_BEAM && entity.beamLength() > 0.1F) {
             renderBeam(entity, partialTick, poseStack, buffers);
@@ -84,11 +89,7 @@ public class InfernalHeroRenderer extends GeoEntityRenderer<InfernalHeroEntity> 
 
     /** the Hero's beam: the player's beam, a deeper darker violet (oriented along +z of the pose) */
     static void drawDarkBeam(PoseStack ps, MultiBufferSource buffers, float length, float time, float width) {
-        float pulse = 1.0F + 0.12F * Mth.sin(time * 1.7F);
-        VertexConsumer vc = buffers.getBuffer(RenderType.eyes(BeamRenderer.TEXTURE));
-        BeamRenderer.drawPlanes(ps, vc, length, 1.7F * width * pulse, -time * 0.28F, 92, 30, 170, 200);
-        BeamRenderer.drawPlanes(ps, vc, length, 0.95F * width * pulse, -time * 0.5F, 128, 60, 210, 255);
-        BeamRenderer.drawPlanes(ps, vc, length, 0.4F * width * pulse, -time * 0.85F, 196, 150, 235, 255);
+        BeamFx.draw(ps, buffers, length, time, width, true);
     }
 
     /** the veins: drawn again additively, full bright */

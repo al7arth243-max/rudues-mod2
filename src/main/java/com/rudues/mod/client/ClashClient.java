@@ -653,11 +653,7 @@ public final class ClashClient {
         if (hero) {
             InfernalHeroRenderer.drawDarkBeam(ps, buffers, len, time, 1.35F);
         } else {
-            float pulse = 1.0F + 0.12F * Mth.sin(time * 1.9F);
-            VertexConsumer vc = buffers.getBuffer(RenderType.eyes(BeamRenderer.TEXTURE));
-            BeamRenderer.drawPlanes(ps, vc, len, 2.1F * pulse, -time * 0.30F, 255, 255, 255, 190);
-            BeamRenderer.drawPlanes(ps, vc, len, 1.2F * pulse, -time * 0.55F, 235, 190, 255, 255);
-            BeamRenderer.drawPlanes(ps, vc, len, 0.5F * pulse, -time * 0.90F, 255, 245, 255, 255);
+            BeamFx.draw(ps, buffers, len, time, 1.35F, false);
         }
         ps.popPose();
     }

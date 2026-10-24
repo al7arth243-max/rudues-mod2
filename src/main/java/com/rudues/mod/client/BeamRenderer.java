@@ -23,7 +23,7 @@ import org.joml.Matrix4f;
 
 import java.util.UUID;
 
-/** Draws the beam as three crossed glowing, scrolling planes (outer glow) plus a hot white-purple core. */
+/** Draws the Concentrated Beam (see BeamFx), following the owner's live aim. */
 public class BeamRenderer extends EntityRenderer<BeamEntity> {
     static final ResourceLocation TEXTURE = new ResourceLocation(RuduesMod.MODID, "textures/entity/purple_beam.png");
 
@@ -68,11 +68,7 @@ public class BeamRenderer extends EntityRenderer<BeamEntity> {
         poseStack.mulPose(Axis.XP.rotationDegrees(pitch));
 
         float time = entity.tickCount + partialTick;
-        float pulse = 1.0F + 0.12F * Mth.sin(time * 1.9F);
-        VertexConsumer vc = buffer.getBuffer(RenderType.eyes(TEXTURE));
-        drawPlanes(poseStack, vc, length, 1.6F * pulse, -time * 0.30F, 255, 255, 255, 190);   // wide glow
-        drawPlanes(poseStack, vc, length, 0.9F * pulse, -time * 0.55F, 235, 190, 255, 255);  // mid
-        drawPlanes(poseStack, vc, length, 0.38F * pulse, -time * 0.90F, 255, 245, 255, 255);  // white-hot core
+        BeamFx.draw(poseStack, buffer, length, time, 1.0F, false);
         poseStack.popPose();
     }
 

@@ -20,6 +20,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.DyeableLeatherItem;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.client.ForgeHooksClient;
@@ -65,6 +66,16 @@ public class InfernalShadowRenderer extends GeoEntityRenderer<InfernalShadowEnti
             EquipmentSlot.CHEST, Set.of("armor_body", "armor_right_arm", "armor_left_arm", "armor_right_forearm", "armor_left_forearm"),
             EquipmentSlot.LEGS, Set.of("armor_waist", "armor_right_leg", "armor_left_leg", "armor_right_shin", "armor_left_shin"),
             EquipmentSlot.FEET, Set.of("armor_right_boot", "armor_left_boot"));
+    /** the armour each growth bursts through: while a growth is out, the plate over it is drawn as gone */
+    private static final Map<String, List<String>> GROWTH_COVERS = Map.of(
+            "corrupt_left_arm", List.of("armor_left_arm"),
+            "corrupt_left_forearm", List.of("armor_left_forearm"),
+            "corrupt_left_leg", List.of("armor_left_leg"),
+            "corrupt_left_shin", List.of("armor_left_shin", "armor_left_boot"),
+            "corrupt_right_leg", List.of("armor_right_leg"),
+            "corrupt_right_shin", List.of("armor_right_shin", "armor_right_boot"));
+    /** a growth bigger than this (bone scale) has broken through the plate */
+    private static final float GROWTH_BREAKS = 0.3F;
     private static final List<EquipmentSlot> ARMOR_SLOTS = List.of(EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET);
     /**
      * Where the hand holds a vanilla sword sprite, in item units from its centre (the sprite runs from the pommel at the
@@ -98,8 +109,10 @@ public class InfernalShadowRenderer extends GeoEntityRenderer<InfernalShadowEnti
                        MultiBufferSource bufferSource, int packedLight) {
         // grabbed by a player's Pummel: drawn tipped over in their hands
         boolean held = !entity.isPuppet() && PummelClient.apply(entity, partialTick, poseStack);
+        // caught by Hero's Rush: drawn on its back, dragged by the neck
+        boolean dragged = !held && !entity.isPuppet() && DraggedVictimRender.apply(entity, partialTick, poseStack);
         super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
-        if (held) {
+        if (held || dragged) {
             poseStack.popPose();
         }
         if (entity.getMove() == InfernalShadowEntity.MOVE_HAMMER) {
@@ -120,7 +133,7 @@ public class InfernalShadowRenderer extends GeoEntityRenderer<InfernalShadowEnti
         boolean slim = info != null && "slim".equals(info.getModelName());
         EquipmentSlot pass = isReRender ? this.armorPass : null;
         boolean corrupt = isReRender && this.corruptionPass;
-        boolean stripped = animatable.armourStripped();
+        Set<String> stripped = pass == null ? Set.of() : strippedBones(animatable, model, partialTick);
         for (GeoBone bone : model.topLevelBones()) {
             applyVisibility(bone, pass, corrupt, stripped, slim);
         }
@@ -128,12 +141,34 @@ public class InfernalShadowRenderer extends GeoEntityRenderer<InfernalShadowEnti
                 red, green, blue, alpha);
     }
 
-    private static void applyVisibility(GeoBone bone, @Nullable EquipmentSlot pass, boolean corrupt, boolean stripped, boolean slim) {
+    /**
+     * The armour bones not to draw: all the limb plates once the Shadow is in phase 2, or, while growths are erupting
+     * (the player's awakening, the Shadow's own phase shift, a corrupted player's Pummel), the plates the grown
+     * growths have burst through. Otherwise the obsidian pokes out through the armour in a jagged mess.
+     */
+    private static Set<String> strippedBones(InfernalShadowEntity entity, BakedGeoModel model, float partialTick) {
+        if (entity.armourStripped()) {
+            return STRIPPED;
+        }
+        if (!entity.corruptionShown(partialTick)) {
+            return Set.of();
+        }
+        Set<String> out = new java.util.HashSet<>();
+        for (Map.Entry<String, List<String>> e : GROWTH_COVERS.entrySet()) {
+            GeoBone growth = model.getBone(e.getKey()).orElse(null);
+            if (growth != null && Math.max(growth.getScaleX(), Math.max(growth.getScaleY(), growth.getScaleZ())) > GROWTH_BREAKS) {
+                out.addAll(e.getValue());
+            }
+        }
+        return out;
+    }
+
+    private static void applyVisibility(GeoBone bone, @Nullable EquipmentSlot pass, boolean corrupt, Set<String> stripped, boolean slim) {
         String name = bone.getName();
         if (name.startsWith("corrupt_")) {
             bone.setHidden(!corrupt);
         } else if (name.startsWith("armor_")) {
-            bone.setHidden(corrupt || pass == null || !ARMOR_BONES.get(pass).contains(name) || (stripped && STRIPPED.contains(name)));
+            bone.setHidden(corrupt || pass == null || !ARMOR_BONES.get(pass).contains(name) || stripped.contains(name));
         } else if (pass != null || corrupt) {
             bone.setHidden(true);              // no skin in an armour pass, but keep walking down the limbs
             bone.setChildrenHidden(false);
@@ -353,10 +388,24 @@ public class InfernalShadowRenderer extends GeoEntityRenderer<InfernalShadowEnti
                 if (!(stack.getItem() instanceof ArmorItem)) {
                     continue;
                 }
-                RenderType type = RenderType.armorCutoutNoCull(armorTexture(animatable, stack, slot));
                 armorPass = slot;
+                float r = 1.0F, g = 1.0F, b = 1.0F;
+                boolean dyed = stack.getItem() instanceof DyeableLeatherItem;
+                if (dyed) {
+                    int rgb = ((DyeableLeatherItem) stack.getItem()).getColor(stack);
+                    r = (rgb >> 16 & 255) / 255.0F;
+                    g = (rgb >> 8 & 255) / 255.0F;
+                    b = (rgb & 255) / 255.0F;
+                }
+                RenderType type = RenderType.armorCutoutNoCull(armorTexture(animatable, stack, slot, null));
                 getRenderer().reRender(bakedModel, poseStack, bufferSource, animatable, type, bufferSource.getBuffer(type),
-                        partialTick, packedLight, packedOverlay, 1, 1, 1, 1);
+                        partialTick, packedLight, packedOverlay, r, g, b, 1);
+                if (dyed) {
+                    // leather: the undyed trim (buttons, laces) sits on its own overlay texture
+                    RenderType over = RenderType.armorCutoutNoCull(armorTexture(animatable, stack, slot, "overlay"));
+                    getRenderer().reRender(bakedModel, poseStack, bufferSource, animatable, over, bufferSource.getBuffer(over),
+                            partialTick, packedLight, packedOverlay, 1, 1, 1, 1);
+                }
                 if (stack.hasFoil()) {
                     RenderType glint = RenderType.armorEntityGlint();
                     getRenderer().reRender(bakedModel, poseStack, bufferSource, animatable, glint, bufferSource.getBuffer(glint),
@@ -395,7 +444,7 @@ public class InfernalShadowRenderer extends GeoEntityRenderer<InfernalShadowEnti
     }
 
     /** the vanilla armour texture of a piece (layer 2 for leggings), through Forge's hook so modded armour works too */
-    private static ResourceLocation armorTexture(InfernalShadowEntity entity, ItemStack stack, EquipmentSlot slot) {
+    private static ResourceLocation armorTexture(InfernalShadowEntity entity, ItemStack stack, EquipmentSlot slot, @Nullable String type) {
         ArmorItem item = (ArmorItem) stack.getItem();
         String material = item.getMaterial().getName();
         String domain = "minecraft";
@@ -404,9 +453,9 @@ public class InfernalShadowRenderer extends GeoEntityRenderer<InfernalShadowEnti
             domain = material.substring(0, colon);
             material = material.substring(colon + 1);
         }
-        String path = String.format(java.util.Locale.ROOT, "%s:textures/models/armor/%s_layer_%d.png", domain, material,
-                slot == EquipmentSlot.LEGS ? 2 : 1);
-        return new ResourceLocation(ForgeHooksClient.getArmorTexture(entity, stack, path, slot, null));
+        String path = String.format(java.util.Locale.ROOT, "%s:textures/models/armor/%s_layer_%d%s.png", domain, material,
+                slot == EquipmentSlot.LEGS ? 2 : 1, type == null ? "" : "_" + type);
+        return new ResourceLocation(ForgeHooksClient.getArmorTexture(entity, stack, path, slot, type));
     }
 
     // ------------------------------------------------------------ the sword: the main-hand item, laid along the blade bone
