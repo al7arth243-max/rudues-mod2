@@ -15,6 +15,10 @@ public final class ModDimensions {
     public static final ResourceKey<Level> CASTLE =
             ResourceKey.create(Registries.DIMENSION, new ResourceLocation(RuduesMod.MODID, "feathered_hold"));
 
+    /** the Eye of the Storm, where Garuda is fought (data/rudues/dimension/storm_crater.json) */
+    public static final ResourceKey<Level> CRATER =
+            ResourceKey.create(Registries.DIMENSION, new ResourceLocation(RuduesMod.MODID, "storm_crater"));
+
     private ModDimensions() {
     }
 }

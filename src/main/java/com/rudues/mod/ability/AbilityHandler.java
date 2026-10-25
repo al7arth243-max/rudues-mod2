@@ -46,6 +46,7 @@ public class AbilityHandler {
                 || com.rudues.mod.entity.InfernalShadowEntity.AWAKENING.contains(player.getUUID())
                 || com.rudues.mod.castle.CastleBoss.inIntro(player)
                 || com.rudues.mod.entity.FeatheredKnightEntity.inScene(player)
+                || com.rudues.mod.entity.GarudaEntity.inScene(player)
                 || player.getVehicle() instanceof com.rudues.mod.entity.FeatheredKnightEntity) {
             return;
         }

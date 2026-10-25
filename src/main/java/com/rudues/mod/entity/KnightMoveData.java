@@ -1,6 +1,6 @@
 package com.rudues.mod.entity;
 
-/** Generated from the Feathered Knight's clips (tools/knight_anim.py): ticks, and points in her frame (forward, right, up). */
+/** Generated from the clips (tools/knight_anim.py, knight_semi.py, garuda_anim.py): ticks, and points in the frame (forward, right, up). */
 public final class KnightMoveData {
     private KnightMoveData() {
     }
@@ -48,13 +48,13 @@ public final class KnightMoveData {
 
     public static final int SEMI_ASCEND_END = 40;
     public static final int SEMI_ASCEND_LIFT = 3;
-    public static final float[] SEMI_ASCEND_GRIP = {0.836F, -0.015F, -0.923F};
+    public static final float[] SEMI_ASCEND_GRIP = {1.631F, -0.867F, -1.533F};
 
     public static final int RUBBLE_DIVE_END = 30;
     public static final int RUBBLE_DIVE_GO = 10;
-    public static final float[] RUBBLE_DIVE_GRIP = {0.347F, 0.000F, -0.030F};
+    public static final float[] RUBBLE_DIVE_GRIP = {2.740F, -0.000F, -1.194F};
 
-    public static final float[] RUBBLE_STRAIN_GRIP = {0.245F, -0.000F, 0.083F};
+    public static final float[] RUBBLE_STRAIN_GRIP = {1.666F, -0.000F, -1.739F};
 
     public static final int RUBBLE_KNOCKED_END = 50;
     public static final int RUBBLE_KNOCKED_LAND = 26;
@@ -77,14 +77,11 @@ public final class KnightMoveData {
     public static final int SWARM_SLASH = 61;
     public static final float[] SWARM_HAND = {0.898F, 0.024F, 1.184F};
 
-    public static final int TRIPLE_AEROGA_END = 68;
+    public static final int TRIPLE_AEROGA_END = 92;
     public static final int TRIPLE_AEROGA_GATHER = 10;
     public static final int TRIPLE_AEROGA_THROW1 = 35;
-    public static final int TRIPLE_AEROGA_THROW2 = 42;
-    public static final int TRIPLE_AEROGA_THROW3 = 49;
-    public static final float[] TRIPLE_AEROGA_ORB0 = {-0.066F, 0.132F, 2.878F};
-    public static final float[] TRIPLE_AEROGA_ORB1 = {0.172F, -0.170F, 2.525F};
-    public static final float[] TRIPLE_AEROGA_ORB2 = {-0.046F, 0.134F, 2.550F};
+    public static final int TRIPLE_AEROGA_THROW2 = 55;
+    public static final int TRIPLE_AEROGA_THROW3 = 75;
 
     public static final int SLASH_LAUNCH_END = 60;
     public static final int SLASH_LAUNCH_DASH = 8;
@@ -98,10 +95,19 @@ public final class KnightMoveData {
     public static final int GRINDER_SCREECH_END = 24;
     public static final int GRINDER_SCREECH_SCREECH = 10;
 
-    public static final float[] GRINDER_CARRY_GRIP = {0.616F, 0.000F, 0.096F};
+    public static final float[] GRINDER_CARRY_GRIP = {0.356F, 0.000F, -0.574F};
 
     public static final int GRINDER_HURL_END = 24;
     public static final int GRINDER_HURL_THROW = 8;
+
+    public static final int DEFEAT_FALL_END = 40;
+    public static final int DEFEAT_FALL_LAND = 20;
+
+    public static final int DEFEAT_RISE_END = 80;
+
+    public static final int DEFEAT_SCREECH_END = 50;
+    public static final int DEFEAT_SCREECH_LIFT = 9;
+    public static final int DEFEAT_SCREECH_SCREECH = 26;
 
     public static final float[] PLAYER_CHARGE_FIST = {-0.029F, 0.515F, 0.994F};
     public static final float[] PLAYER_STRAIN_FIST = {0.160F, 0.252F, 1.850F};

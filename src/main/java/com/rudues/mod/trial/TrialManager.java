@@ -124,6 +124,11 @@ public final class TrialManager {
 
     /** The sword at the centre: home you go. */
     public static void leaveViaSword(ServerPlayer player) {
+        if (com.rudues.mod.castle.CraterManager.isCrater(player.level())) {
+            // out of Garuda's crater: back to wherever you entered the Feathered Hold from
+            later(() -> com.rudues.mod.castle.CastleManager.leave(player));
+            return;
+        }
         later(() -> sendHome(player));
     }
 

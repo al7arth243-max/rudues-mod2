@@ -80,7 +80,8 @@ public final class BossMusic {
                 want = ModSounds.HERO_THEME.get();
             } else if (!mc.level.getEntitiesOfClass(InfernalShadowEntity.class, box, LivingEntity::isAlive).isEmpty()) {
                 want = ModSounds.SHADOW_THEME.get();
-            } else if (!mc.level.getEntitiesOfClass(com.rudues.mod.entity.FeatheredKnightEntity.class, box, LivingEntity::isAlive).isEmpty()) {
+            } else if (!mc.level.getEntitiesOfClass(com.rudues.mod.entity.FeatheredKnightEntity.class, box, LivingEntity::isAlive).isEmpty()
+                    || !mc.level.getEntitiesOfClass(com.rudues.mod.entity.GarudaEntity.class, box.inflate(32), LivingEntity::isAlive).isEmpty()) {
                 want = ModSounds.BENEDIKTA_THEME.get();
             }
         }

@@ -32,6 +32,8 @@ public class ClashInputPacket {
             hero.clashInput(p, msg.presses);
         } else if (p != null && p.level().getEntity(msg.heroId) instanceof com.rudues.mod.entity.FeatheredKnightEntity knight) {
             knight.clashInput(p, msg.presses);
+        } else if (p != null && p.level().getEntity(msg.heroId) instanceof com.rudues.mod.entity.GarudaEntity garuda) {
+            garuda.clashInput(p, msg.presses);
         } else if (p != null && p.level().getEntity(msg.heroId) instanceof com.rudues.mod.entity.InfernalShadowEntity shadow) {
             shadow.sceneInput(p, msg.presses);
         }

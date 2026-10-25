@@ -46,9 +46,16 @@ public class DemonRenderer extends GeoEntityRenderer<DemonEntity> {
         float yaw;
         if (owner != null) {
             // draw the demon exactly where its player is (no network lag) and facing where they aim
-            Vec3 delta = owner.getPosition(partialTick).subtract(entity.getPosition(partialTick));
-            poseStack.translate(delta.x, delta.y, delta.z);
+            Vec3 at = owner.getPosition(partialTick);
             yaw = owner.getViewYRot(partialTick);
+            // Garuda's end fight puts him where the script says (in the sky, on the wind ball, at her throat)
+            Vec3 scripted = GarudaSceneClient.avatarAt(owner.getId(), partialTick);
+            if (scripted != null) {
+                at = scripted;
+                yaw = com.rudues.mod.entity.GarudaScene.HERO_YAW;
+            }
+            Vec3 delta = at.subtract(entity.getPosition(partialTick));
+            poseStack.translate(delta.x, delta.y, delta.z);
         } else {
             yaw = Mth.rotLerp(partialTick, entity.yRotO, entity.getYRot());
         }
@@ -57,5 +64,10 @@ public class DemonRenderer extends GeoEntityRenderer<DemonEntity> {
         // the obsidian texture is dark: render it fully lit so it never goes black
         super.render(entity, entityYaw, partialTick, poseStack, bufferSource, LightTexture.FULL_BRIGHT);
         poseStack.popPose();
+    }
+
+    @Override
+    public boolean shouldRender(DemonEntity entity, net.minecraft.client.renderer.culling.Frustum frustum, double x, double y, double z) {
+        return GarudaSceneClient.active() || super.shouldRender(entity, frustum, x, y, z);
     }
 }

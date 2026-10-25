@@ -45,7 +45,7 @@ public class RubbleRenderer extends EntityRenderer<RubbleEntity> {
         ps.mulPose(Axis.YP.rotationDegrees(-bodyYaw + 17.0F));
         ps.mulPose(Axis.XP.rotationDegrees(8.0F + (strain ? 0 : Mth.sin(age * 0.05F) * 6.0F)));
         ps.mulPose(Axis.ZP.rotationDegrees(-6.0F + (strain ? 0 : Mth.cos(age * 0.04F) * 5.0F)));
-        float s = 0.86F;
+        float s = 0.72F;
         ps.scale(s, s, s);
         // a 3 x 2 x 3 clump with its corners knocked off, a few blocks proud of the rest
         for (int x = -1; x <= 1; x++) {

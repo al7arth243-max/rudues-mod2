@@ -28,13 +28,23 @@ public final class CastleBuilder {
     private CastleBuilder() {
     }
 
+    /** a block-by-name sink: any pure-Java layout writes into one */
+    public interface Blocks4 {
+        void set(int x, int y, int z, String block);
+    }
+
     public static int build(ServerLevel level) {
+        return build(level, sink -> CastleLayout.build(sink::set));
+    }
+
+    /** writes a layout (given a sink) into the level, then joins up panes, bars and walls */
+    public static int build(ServerLevel level, java.util.function.Consumer<Blocks4> layout) {
         Map<String, BlockState> cache = new HashMap<>();
         List<BlockPos> connect = new ArrayList<>();
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         int[] count = {0};
         var lookup = level.holderLookup(Registries.BLOCK);
-        CastleLayout.build((x, y, z, b) -> {
+        layout.accept((x, y, z, b) -> {
             BlockState st = cache.computeIfAbsent(b, k -> {
                 try {
                     return BlockStateParser.parseForBlock(lookup, k, false).blockState();

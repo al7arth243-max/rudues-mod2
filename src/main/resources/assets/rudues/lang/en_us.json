@@ -115,5 +115,12 @@
   "message.rudues.rubble_clash": "Hold it back!",
   "message.rudues.rubble_won": "SHATTERED",
   "message.rudues.rubble_lost": "CRUSHED",
-  "entity.rudues.rubble": "Rubble"
+  "entity.rudues.rubble": "Rubble",
+  "entity.rudues.garuda": "Garuda",
+  "entity.rudues.wind_ball": "Wind Ball",
+  "gui.rudues.garuda_title": "Benedikta, Reborn in the Storm",
+  "message.rudues.garuda_arrives": "Garuda shrieks. The storm answers her.",
+  "message.rudues.garuda_defeated": "Garuda is gone. A blade waits in the crater's heart.",
+  "message.rudues.garuda_clash1": "Drive it down!",
+  "message.rudues.garuda_clash2": "Burn her!"
 }

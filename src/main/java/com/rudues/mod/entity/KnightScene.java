@@ -24,6 +24,10 @@ public final class KnightScene {
     }
 
     public static final int NONE = -1, TRANSFORM = 0, ASCEND = 1, PLAYER = 2, DIVE = 3, STRAIN = 4, WIN = 5, LOSE = 6, RETURN = 7;
+    /** her defeat: struck down, struggling up, into the sky, and the storm that takes the castle */
+    public static final int D_FALL = 10, D_RISE = 11, D_ASCEND = 12, D_STORM = 13;
+    /** the storm: when the white is complete, and when you are carried into the crater */
+    public static final int STORM_LEN = 100, STORM_WHITE = 88, STORM_CARRY = 96;
 
     public static int length(int stage) {
         return switch (stage) {
@@ -34,6 +38,10 @@ public final class KnightScene {
             case STRAIN -> STRAIN_MAX;
             case WIN -> 50;
             case LOSE -> 50;
+            case D_FALL -> KnightMoveData.DEFEAT_FALL_END;
+            case D_RISE -> KnightMoveData.DEFEAT_RISE_END;
+            case D_ASCEND -> KnightMoveData.DEFEAT_SCREECH_END;
+            case D_STORM -> STORM_LEN;
             default -> 40;
         };
     }
@@ -74,10 +82,10 @@ public final class KnightScene {
         return contact().add(0, 1.35, 0.85);
     }
 
-    /** her feet while she bears down (her grip on the rubble's far top corner; she faces -z, her right is +x) */
+    /** her feet while she bears down: the rock held between her talons (she faces -z, her right is +x) */
     public static Vec3 knightStrain() {
         float[] g = KnightMoveData.RUBBLE_STRAIN_GRIP;
-        Vec3 grip = rubbleStrain().add(0, 0.7, 1.0);
+        Vec3 grip = rubbleStrain();
         return grip.add(-g[1], -g[2], g[0]);
     }
 

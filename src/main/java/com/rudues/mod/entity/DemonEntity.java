@@ -76,6 +76,11 @@ public class DemonEntity extends Entity implements GeoEntity {
     private static final RawAnimation POUND_FINISH = RawAnimation.begin().thenPlay("animation.infernal_titan.pound_finish");
     private static final RawAnimation POUND_KICKED = RawAnimation.begin().thenPlay("animation.infernal_titan.pound_kicked");
 
+    // the Garuda end fight
+    private static final String[][] GARUDA = {{"hg_launched", "hold"}, {"hg_push", "loop"}, {"hg_push_win", "once"}, {"hg_push_lose", "hold"},
+            {"hg_neck_grab", "hold"}, {"hg_neck_punch", "loop"}, {"hg_kicked", "hold"}, {"hg_burn", "loop"}, {"hg_hellfire", "once"},
+            {"hg_burn_lose", "once"}};
+
     /** length of the spawn/roar animation in ticks */
     private static final int INTRO_TICKS = 28;
 
@@ -152,7 +157,7 @@ public class DemonEntity extends Entity implements GeoEntity {
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>(this, "main", 3, this::mainAnimation));
-        controllers.add(new AnimationController<>(this, "attack", 0, state -> PlayState.STOP)
+        AnimationController<DemonEntity> attack = new AnimationController<DemonEntity>(this, "attack", 0, state -> PlayState.STOP)
                 .triggerableAnim("beam", BEAM)
                 .triggerableAnim("obliterator", OBLITERATOR)
                 .triggerableAnim("hellfire", HELLFIRE)
@@ -176,7 +181,13 @@ public class DemonEntity extends Entity implements GeoEntity {
                 .triggerableAnim("pound_rush", POUND_RUSH)
                 .triggerableAnim("pound_punch", POUND_PUNCH)
                 .triggerableAnim("pound_finish", POUND_FINISH)
-                .triggerableAnim("pound_kicked", POUND_KICKED));
+                .triggerableAnim("pound_kicked", POUND_KICKED);
+        for (String[] g : GARUDA) {
+            String n = "animation.infernal_titan." + g[0];
+            attack.triggerableAnim(g[0], g[1].equals("loop") ? RawAnimation.begin().thenLoop(n)
+                    : g[1].equals("hold") ? RawAnimation.begin().thenPlayAndHold(n) : RawAnimation.begin().thenPlay(n));
+        }
+        controllers.add(attack);
     }
 
     private PlayState mainAnimation(AnimationState<DemonEntity> state) {

@@ -105,4 +105,14 @@ public class ModEntities {
             () -> EntityType.Builder.<RubbleEntity>of(RubbleEntity::new, MobCategory.MISC)
                     .sized(RubbleEntity.SIZE, RubbleEntity.SIZE).fireImmune().noSave().clientTrackingRange(10).updateInterval(1)
                     .build("rubble"));
+
+    /** Benedikta reborn in the storm crater, as big as the Hero of Hell, and her great ball of wind */
+    public static final RegistryObject<EntityType<com.rudues.mod.entity.GarudaEntity>> GARUDA = ENTITIES.register("garuda",
+            () -> EntityType.Builder.<com.rudues.mod.entity.GarudaEntity>of(com.rudues.mod.entity.GarudaEntity::new, MobCategory.MONSTER)
+                    .sized(4.2F, 7.0F).fireImmune().clientTrackingRange(16).updateInterval(1)
+                    .build("garuda"));
+    public static final RegistryObject<EntityType<com.rudues.mod.entity.WindBallEntity>> WIND_BALL = ENTITIES.register("wind_ball",
+            () -> EntityType.Builder.<com.rudues.mod.entity.WindBallEntity>of(com.rudues.mod.entity.WindBallEntity::new, MobCategory.MISC)
+                    .sized(1.0F, 1.0F).fireImmune().noSave().clientTrackingRange(16).updateInterval(1)
+                    .build("wind_ball"));
 }

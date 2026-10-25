@@ -81,6 +81,11 @@ public final class CastleManager {
         return server.getLevel(ModDimensions.CASTLE);
     }
 
+    /** the castle and the storm crater: neither can be broken, built on or blown up */
+    public static boolean isProtected(@Nullable LevelAccessor level) {
+        return isCastle(level) || CraterManager.isCrater(level);
+    }
+
     public static boolean isCastle(@Nullable LevelAccessor level) {
         return level instanceof Level l && l.dimension() == ModDimensions.CASTLE;
     }
@@ -101,6 +106,7 @@ public final class CastleManager {
             ROOMS.clear();
             LOGGER.info("Built the Feathered Hold ({} blocks) in {} ms", n, System.currentTimeMillis() - t0);
         }
+        CraterManager.ensureBuilt(server);      // where her storm takes you
         return true;
     }
 
@@ -395,21 +401,21 @@ public final class CastleManager {
     // ---------------------------------------------------------------- the castle cannot be torn down
     @SubscribeEvent
     public static void onBreak(BlockEvent.BreakEvent event) {
-        if (isCastle(event.getLevel()) && !event.getPlayer().isCreative()) {
+        if (isProtected(event.getLevel()) && !event.getPlayer().isCreative()) {
             event.setCanceled(true);
         }
     }
 
     @SubscribeEvent
     public static void onPlace(BlockEvent.EntityPlaceEvent event) {
-        if (isCastle(event.getLevel()) && !(event.getEntity() instanceof Player p && p.isCreative())) {
+        if (isProtected(event.getLevel()) && !(event.getEntity() instanceof Player p && p.isCreative())) {
             event.setCanceled(true);
         }
     }
 
     @SubscribeEvent
     public static void onExplosion(ExplosionEvent.Detonate event) {
-        if (isCastle(event.getLevel())) {
+        if (isProtected(event.getLevel())) {
             event.getAffectedBlocks().clear();
         }
     }
@@ -418,7 +424,7 @@ public final class CastleManager {
      * (doors, chests and levers still open) */
     @SubscribeEvent
     public static void onUseOnBlock(net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock event) {
-        if (isCastle(event.getLevel()) && !event.getEntity().isCreative()) {
+        if (isProtected(event.getLevel()) && !event.getEntity().isCreative()) {
             event.setUseItem(net.minecraftforge.eventbus.api.Event.Result.DENY);
         }
     }
@@ -426,21 +432,21 @@ public final class CastleManager {
     /** nothing else changes it either: no trampling, no mobs breaking doors */
     @SubscribeEvent
     public static void onGrief(net.minecraftforge.event.entity.EntityMobGriefingEvent event) {
-        if (event.getEntity() != null && isCastle(event.getEntity().level())) {
+        if (event.getEntity() != null && isProtected(event.getEntity().level())) {
             event.setResult(net.minecraftforge.eventbus.api.Event.Result.DENY);
         }
     }
 
     @SubscribeEvent
     public static void onTrample(BlockEvent.FarmlandTrampleEvent event) {
-        if (isCastle(event.getLevel())) {
+        if (isProtected(event.getLevel())) {
             event.setCanceled(true);
         }
     }
 
     @SubscribeEvent
     public static void onBucket(FillBucketEvent event) {
-        if (isCastle(event.getLevel()) && !event.getEntity().isCreative()) {
+        if (isProtected(event.getLevel()) && !event.getEntity().isCreative()) {
             event.setCanceled(true);
         }
     }

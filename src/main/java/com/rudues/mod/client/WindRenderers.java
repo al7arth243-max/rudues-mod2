@@ -123,6 +123,7 @@ public final class WindRenderers {
             float in = Mth.clamp(age / 3.0F, 0.0F, 1.0F);
             ps.pushPose();
             ps.translate(0.0F, 0.25F, 0.0F);
+            ps.scale(e.size(), e.size(), e.size());
             // the trail: two crossed streak ribbons laid back along the flight
             ps.pushPose();
             ps.mulPose(Axis.YP.rotationDegrees(-Mth.lerp(pt, e.yRotO, e.getYRot())));
@@ -200,8 +201,10 @@ public final class WindRenderers {
                 return;
             }
             float height = TornadoEntity.HEIGHT * (0.35F + 0.65F * s);
+            float sz = e.size();
             VertexConsumer st = buffers.getBuffer(RenderType.eyes(STREAK));
             ps.pushPose();
+            ps.scale(sz, sz, sz);
             for (int i = 0; i < LAYERS; i++) {
                 float h0 = height * i / LAYERS, h1 = height * (i + 1.4F) / LAYERS;
                 // the funnel widens upward and its spine sways

@@ -88,9 +88,9 @@ public class FeatheredKnightEntity extends Monster implements GeoEntity {
     private static final String[] ONCE = {"wind_burst", "aeroga", "pierce", "wind_blade"};
     private static final String[] SEMI_ANIMS = {"semi_transform", "semi_ascend", "rubble_hold", "rubble_dive", "rubble_strain", "rubble_knocked",
             "rubble_release", "nosedive_rise", "dive", "swarm", "triple_aeroga", "slash_launch", "rain_volley", "grinder_screech", "grinder_charge",
-            "grinder_carry", "grinder_grind", "grinder_hurl", "fly", "hover"};
+            "grinder_carry", "grinder_grind", "grinder_hurl", "fly", "hover", "defeat_fall", "defeat_rise", "defeat_screech", "storm_call"};
     private static final java.util.Set<String> SEMI_LOOPS = java.util.Set.of("rubble_hold", "rubble_strain", "grinder_charge", "grinder_carry",
-            "grinder_grind", "fly", "hover");
+            "grinder_grind", "fly", "hover", "storm_call");
     private static final RawAnimation[] SEMI_RAW = new RawAnimation[SEMI_ANIMS.length];
     static {
         for (int i = 0; i < SEMI_ANIMS.length; i++) {
@@ -131,7 +131,7 @@ public class FeatheredKnightEntity extends Monster implements GeoEntity {
     @Nullable
     private WindBladeEntity blade;
     // ---- phase two
-    private boolean sceneDone, pendingScene, sceneWon;
+    private boolean sceneDone, pendingScene, sceneWon, pendingDefeat;
     @Nullable
     private UUID sceneFoe;
     private int sceneT, pressesThisTick;
@@ -323,6 +323,18 @@ public class FeatheredKnightEntity extends Monster implements GeoEntity {
         }
         if (pendingScene && target instanceof ServerPlayer sp && sp.isAlive() && getMove() != MOVE_PIERCE) {
             startScene(sp);
+            return;
+        }
+        if (isVehicle() && !grinding()) {
+            letGo = true;
+            ejectPassengers();
+            letGo = false;
+        }
+        if (isSemi() && pendingDefeat && target instanceof ServerPlayer dp && dp.isAlive()) {
+            if (getMove() >= MOVE_NOSEDIVE) {
+                endSemiMove();
+            }
+            startDefeat(dp);
             return;
         }
         if (isSemi()) {
@@ -988,8 +1000,119 @@ public class FeatheredKnightEntity extends Monster implements GeoEntity {
                     endScene(p);
                 }
             }
+            case KnightScene.D_FALL -> {
+                Vec3 a = KnightScene.home(), b = KnightScene.start();
+                int land = KnightMoveData.DEFEAT_FALL_LAND;
+                double k = Mth.clamp(t / (double) land, 0, 1);
+                glideTo(a.lerp(b, k * k).add(0, 0.8 * Math.sin(Math.PI * k), 0));
+                if (t == land) {
+                    playSound(SoundEvents.NETHERITE_BLOCK_FALL, 2.0F, 0.5F);
+                    playSound(SoundEvents.PHANTOM_HURT, 1.6F, 0.6F);
+                    sl.sendParticles(ParticleTypes.CLOUD, b.x, b.y + 0.2, b.z, 30, 1.2, 0.1, 1.2, 0.08);
+                }
+                if (t >= KnightScene.length(stage)) {
+                    setStage(KnightScene.D_RISE);
+                    setAnim("defeat_rise");
+                }
+            }
+            case KnightScene.D_RISE -> {
+                glideTo(KnightScene.start());
+                if (t == 10 || t == 46 || t == 62) {
+                    playSound(SoundEvents.PHANTOM_HURT, 1.2F, 0.7F + random.nextFloat() * 0.2F);
+                }
+                if (t >= KnightScene.length(stage)) {
+                    setStage(KnightScene.D_ASCEND);
+                    setAnim("defeat_screech");
+                }
+            }
+            case KnightScene.D_ASCEND -> {
+                Vec3 a = KnightScene.start(), b = KnightScene.start().add(0, 30, 0);
+                double k = KnightScene.ease((t - KnightMoveData.DEFEAT_SCREECH_LIFT) / 41.0);
+                glideTo(a.lerp(b, k));
+                if (t == KnightMoveData.DEFEAT_SCREECH_LIFT) {
+                    playSound(SoundEvents.ENDER_DRAGON_FLAP, 3.0F, 0.7F);
+                }
+                if (t == KnightMoveData.DEFEAT_SCREECH_SCREECH) {
+                    playSound(SoundEvents.PHANTOM_AMBIENT, 5.0F, 0.4F);
+                    playSound(SoundEvents.ENDER_DRAGON_GROWL, 3.0F, 1.2F);
+                }
+                if (t >= KnightScene.length(stage)) {
+                    setStage(KnightScene.D_STORM);
+                    setAnim("storm_call");
+                }
+            }
+            case KnightScene.D_STORM -> {
+                Vec3 at = KnightScene.start().add(0, 30 + 0.4 * Math.sin(t * 0.15), 0);
+                glideTo(at);
+                if (t % 10 == 0) {
+                    sl.playSound(null, p.getX(), p.getY(), p.getZ(), SoundEvents.ELYTRA_FLYING, net.minecraft.sounds.SoundSource.HOSTILE,
+                            1.0F + t / 40.0F, 0.5F + t / 300.0F);
+                }
+                if (t == 20 || t == 60) {
+                    playSound(SoundEvents.PHANTOM_AMBIENT, 5.0F, 0.4F);
+                }
+                if (t % 3 == 0) {
+                    sl.sendParticles(ParticleTypes.CLOUD, p.getX(), p.getY() + 2, p.getZ(), 10, 8, 4, 8, 0.4);
+                }
+                if (t == KnightScene.STORM_CARRY) {
+                    carryToCrater(p);
+                    return;
+                }
+            }
             default -> abortScene();
         }
+    }
+
+    private void glideTo(Vec3 v) {
+        setPos(v.x, v.y, v.z);
+    }
+
+    private void startDefeat(ServerPlayer p) {
+        pendingDefeat = false;
+        sceneFoe = p.getUUID();
+        SHIELDED.put(p.getUUID(), false);
+        this.entityData.set(SCENE_PLAYER, p.getId());
+        this.entityData.set(TALONS, false);
+        if (p.isPassenger()) {
+            p.stopRiding();
+        }
+        for (net.minecraft.world.entity.projectile.Projectile pr : level().getEntitiesOfClass(net.minecraft.world.entity.projectile.Projectile.class,
+                getBoundingBox().inflate(64), e -> e.getOwner() == this)) {
+            pr.discard();
+        }
+        Vec3 o = KnightScene.origin();
+        p.connection.teleport(o.x, o.y, o.z, KnightScene.PLAYER_YAW, 0.0F);
+        Vec3 h = KnightScene.home();
+        noPhysics = true;
+        setNoGravity(true);
+        setPos(h.x, h.y, h.z);
+        faceYaw(KnightScene.KNIGHT_YAW);
+        setMove(MOVE_SCENE);
+        setStage(KnightScene.D_FALL);
+        setAnim("defeat_fall");
+        playSound(SoundEvents.PHANTOM_DEATH, 2.0F, 0.8F);
+    }
+
+    /** the storm has taken the castle: the player wakes in the crater, Garuda waits */
+    private void carryToCrater(ServerPlayer p) {
+        net.minecraft.server.MinecraftServer server = p.getServer();
+        if (server == null || !com.rudues.mod.castle.CraterManager.ensureBuilt(server)) {
+            abortScene();
+            return;
+        }
+        ServerLevel crater = com.rudues.mod.castle.CraterManager.craterLevel(server);
+        GarudaEntity.shield(p);
+        SHIELDED.remove(p.getUUID());
+        com.rudues.mod.castle.CraterManager.bring(p);
+        GarudaEntity g = com.rudues.mod.registry.ModEntities.GARUDA.get().create(crater);
+        if (g != null) {
+            Vec3 s = GarudaScene.flyFrom().add(0, 20, 30);
+            g.moveTo(s.x, s.y, s.z, 180.0F, 0.0F);
+            crater.addFreshEntity(g);
+            g.beginArrival(p);
+        }
+        sceneFoe = null;
+        discard();
     }
 
     private void beginDive(ServerPlayer p) {
@@ -1099,7 +1222,7 @@ public class FeatheredKnightEntity extends Monster implements GeoEntity {
                 return null;
             }
         }
-        return at.add(forward(yaw).scale(g[0])).add(right(yaw).scale(g[1])).add(0, g[2] - 0.5, 0);
+        return at.add(forward(yaw).scale(g[0])).add(right(yaw).scale(g[1])).add(0, g[2], 0);
     }
 
     // ================================================================ phase two: flight and the Semi Prime moves
@@ -1783,6 +1906,13 @@ public class FeatheredKnightEntity extends Monster implements GeoEntity {
         }
         if (getMove() == MOVE_SCENE && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
             return false;
+        }
+        if (!level().isClientSide && isSemi() && sceneDone && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            // she isn't killed in Semi Prime either: struck down at the last, she calls the storm
+            if (getHealth() - amount <= 1.0F) {
+                amount = Math.max(0.0F, getHealth() - 1.0F);
+                pendingDefeat = true;
+            }
         }
         if (!level().isClientSide && !isSemi() && !sceneDone && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
             // she can't be finished in her first form: at a fifth of her health she turns Semi Prime

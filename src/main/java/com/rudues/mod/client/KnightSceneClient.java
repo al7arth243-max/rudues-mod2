@@ -52,6 +52,18 @@ public final class KnightSceneClient {
         return on;
     }
 
+    /** ticks into the storm that takes the castle (her defeat), or -1 */
+    public static float stormTime(float pt) {
+        FeatheredKnightEntity k = knight;
+        if (!on || k == null) {
+            return -1.0F;
+        }
+        if (k.sceneStage() == KnightScene.D_STORM) {
+            return k.sceneTime(pt);
+        }
+        return -1.0F;
+    }
+
     @Nullable
     private static FeatheredKnightEntity find(Minecraft mc) {
         if (mc.level == null || mc.player == null) {
@@ -115,6 +127,12 @@ public final class KnightSceneClient {
             }
             if (stage == KnightScene.STRAIN) {
                 shake = Math.max(shake, 0.18F);
+            }
+            if (stage == KnightScene.D_STORM) {
+                shake = Math.max(shake, Math.min(1.0F, 0.2F + t / 90.0F));
+                if (t >= KnightScene.STORM_WHITE) {
+                    StormClient.holdWhite();
+                }
             }
             // the button only counts in the clash; any other time in the scene it does nothing
             int n = 0;
@@ -202,6 +220,22 @@ public final class KnightSceneClient {
                 Vec3 eye = o.add(5.6, 1.1, -1.6);
                 return new Shot(eye, o.add(0, 0.9, 0.6), 60.0F);
             }
+            case KnightScene.D_FALL -> {
+                return new Shot(o.add(6.5, 2.2, 4.0), her.add(0, 0.8, 0), 58.0F);
+            }
+            case KnightScene.D_RISE -> {
+                float kk = (float) KnightScene.ease(t / KnightScene.length(stage));
+                Vec3 s = KnightScene.start();
+                return new Shot(s.add(1.8 - 0.4 * kk, 0.55 + 0.4 * kk, -3.3 + 0.8 * kk), s.add(0, 0.8 + 0.6 * kk, 0), 54.0F);
+            }
+            case KnightScene.D_ASCEND -> {
+                return new Shot(o.add(-1.2, 1.7, -2.4), her.add(0, 1.0, 0), 66.0F);
+            }
+            case KnightScene.D_STORM -> {
+                double a = t * 0.025;
+                Vec3 eye = o.add(Math.sin(a) * 4.0, 1.6, -Math.cos(a) * 4.0);
+                return new Shot(eye, her.add(0, 1.0, 0).lerp(o.add(0, 12, 0), 0.3), 74.0F);
+            }
             default -> {
                 Vec3 eye = o.add(-1.3, 1.8, -2.8);
                 return new Shot(eye, her.add(0, 1.2, 0), 62.0F);
@@ -288,6 +322,11 @@ public final class KnightSceneClient {
         }
         int stage = k.sceneStage();
         float t = k.sceneTime(pt);
+        if (stage == KnightScene.D_STORM && t > 56) {
+            // the storm closes in white
+            float wk = Mth.clamp((t - 56) / (KnightScene.STORM_WHITE - 56.0F), 0.0F, 1.0F);
+            g.fill(0, 0, w, h, ((int) (wk * wk * 255) << 24) | StormClient.WHITE);
+        }
         if ((stage == KnightScene.WIN || stage == KnightScene.LOSE) && t < 40) {
             boolean won = stage == KnightScene.WIN;
             Component banner = Component.translatable(won ? "message.rudues.rubble_won" : "message.rudues.rubble_lost");
