@@ -35,6 +35,12 @@ public class ClientModEvents {
         event.registerEntityRenderer(ModEntities.FIRE_GEYSER.get(), FireGeyserRenderer::new);
         // drawn as a large, full-bright fire charge (plus its flame trail)
         event.registerEntityRenderer(ModEntities.SHADOW_FIREBALL.get(), ShadowFireballRenderer::new);
+        // the Feathered Knight and her wind
+        event.registerEntityRenderer(ModEntities.FEATHERED_KNIGHT.get(), FeatheredKnightRenderer::new);
+        event.registerEntityRenderer(ModEntities.WIND_BOLT.get(), WindRenderers.Bolt::new);
+        event.registerEntityRenderer(ModEntities.AEROGA_ORB.get(), WindRenderers.Orb::new);
+        event.registerEntityRenderer(ModEntities.TORNADO.get(), WindRenderers.Tornado::new);
+        event.registerEntityRenderer(ModEntities.WIND_BLADE.get(), WindRenderers.Blade::new);
     }
 
     /** awakened players wear the Shadow's corruption (both skin models) */

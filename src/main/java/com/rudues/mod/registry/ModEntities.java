@@ -11,6 +11,11 @@ import com.rudues.mod.entity.FireGeyserEntity;
 import com.rudues.mod.entity.ShadowFireballEntity;
 import com.rudues.mod.entity.RageBlastEntity;
 import com.rudues.mod.entity.WindSlashEntity;
+import com.rudues.mod.entity.FeatheredKnightEntity;
+import com.rudues.mod.entity.WindBoltEntity;
+import com.rudues.mod.entity.AerogaOrbEntity;
+import com.rudues.mod.entity.TornadoEntity;
+import com.rudues.mod.entity.WindBladeEntity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraftforge.registries.DeferredRegister;
@@ -72,4 +77,26 @@ public class ModEntities {
             () -> EntityType.Builder.<ShadowFireballEntity>of(ShadowFireballEntity::new, MobCategory.MISC)
                     .sized(0.6F, 0.6F).clientTrackingRange(8).updateInterval(2)
                     .build("shadow_fireball"));
+
+    /** the Feathered Hold's mistress, and her wind */
+    public static final RegistryObject<EntityType<FeatheredKnightEntity>> FEATHERED_KNIGHT = ENTITIES.register("feathered_knight",
+            () -> EntityType.Builder.<FeatheredKnightEntity>of(FeatheredKnightEntity::new, MobCategory.MONSTER)
+                    .sized(0.6F, 1.8F).fireImmune().clientTrackingRange(10).updateInterval(1)
+                    .build("feathered_knight"));
+    public static final RegistryObject<EntityType<WindBoltEntity>> WIND_BOLT = ENTITIES.register("wind_bolt",
+            () -> EntityType.Builder.<WindBoltEntity>of(WindBoltEntity::new, MobCategory.MISC)
+                    .sized(0.5F, 0.5F).fireImmune().clientTrackingRange(8).updateInterval(1)
+                    .build("wind_bolt"));
+    public static final RegistryObject<EntityType<AerogaOrbEntity>> AEROGA_ORB = ENTITIES.register("aeroga_orb",
+            () -> EntityType.Builder.<AerogaOrbEntity>of(AerogaOrbEntity::new, MobCategory.MISC)
+                    .sized(1.0F, 1.0F).fireImmune().clientTrackingRange(8).updateInterval(1)
+                    .build("aeroga_orb"));
+    public static final RegistryObject<EntityType<TornadoEntity>> TORNADO = ENTITIES.register("wind_tornado",
+            () -> EntityType.Builder.<TornadoEntity>of(TornadoEntity::new, MobCategory.MISC)
+                    .sized(2.0F, 5.5F).fireImmune().clientTrackingRange(8).updateInterval(2)
+                    .build("wind_tornado"));
+    public static final RegistryObject<EntityType<WindBladeEntity>> WIND_BLADE = ENTITIES.register("wind_blade",
+            () -> EntityType.Builder.<WindBladeEntity>of(WindBladeEntity::new, MobCategory.MISC)
+                    .sized(1.0F, 0.5F).fireImmune().clientTrackingRange(8).updateInterval(1)
+                    .build("wind_blade"));
 }

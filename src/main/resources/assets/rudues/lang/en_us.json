@@ -98,5 +98,17 @@
   "message.rudues.hero_unavailable": "The Hero of Hell will not answer here.",
   "message.rudues.semi_prime": "The gauge is full... the corruption takes you. Semi Prime!",
   "message.rudues.semi_prime_ended": "The corruption recedes. Semi Prime fades.",
-  "gui.rudues.semi_prime": "Semi Prime"
+  "gui.rudues.semi_prime": "Semi Prime",
+  "message.rudues.castle_arrive": "The Feathered Hold. Somewhere above the mist, wings stir.",
+  "block.rudues.castle_portal": "Feathered Hold Portal",
+  "message.rudues.castle_portal_opened": "The calcite drinks the emerald. Wind howls from the ring.",
+  "message.rudues.castle_needs_power": "The ring will not take you. Only the bearer of the power of Rage may cross.",
+  "entity.rudues.feathered_knight": "The Feathered Knight",
+  "entity.rudues.wind_bolt": "Wind Bolt",
+  "entity.rudues.aeroga_orb": "Aeroga",
+  "entity.rudues.wind_tornado": "Tornado",
+  "entity.rudues.wind_blade": "Wind Blade",
+  "gui.rudues.knight_title": "Mistress of the Feathered Hold",
+  "message.rudues.knight_arrives": "She raises her rapier.",
+  "message.rudues.knight_defeated": "The Feathered Knight falls. The wind dies on the roof."
 }

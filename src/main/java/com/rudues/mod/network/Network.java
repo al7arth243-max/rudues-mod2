@@ -9,7 +9,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class Network {
-    private static final String PROTOCOL = "8";
+    private static final String PROTOCOL = "9";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(RuduesMod.MODID, "main"), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
 
@@ -45,6 +45,9 @@ public class Network {
         CHANNEL.messageBuilder(BoomPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(BoomPacket::encode).decoder(BoomPacket::decode)
                 .consumerMainThread(BoomPacket::handle).add();
+        CHANNEL.messageBuilder(IntroPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(IntroPacket::encode).decoder(IntroPacket::decode)
+                .consumerMainThread(IntroPacket::handle).add();
     }
 
     /** a rendered explosion, for everyone near enough to see it */

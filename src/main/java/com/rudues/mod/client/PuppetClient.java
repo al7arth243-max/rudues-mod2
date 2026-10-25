@@ -89,6 +89,7 @@ public final class PuppetClient {
         pu.yaw = m.yaw;
         pu.sword = m.sword;
         pu.body.puppetCorrupt = m.corrupt;
+        pu.body.puppetClip = m.clip;
         dress(pu, player);
         pu.body.triggerAnim("main", m.clip);
     }

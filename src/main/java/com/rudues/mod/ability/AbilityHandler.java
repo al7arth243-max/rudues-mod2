@@ -43,7 +43,8 @@ public class AbilityHandler {
             return; // still busy with the previous demon move
         }
         if (Pummel.busy(player) || HeroForm.inClash(player) || HeroForm.transforming(player) || SemiPrime.transforming(player)
-                || com.rudues.mod.entity.InfernalShadowEntity.AWAKENING.contains(player.getUUID())) {
+                || com.rudues.mod.entity.InfernalShadowEntity.AWAKENING.contains(player.getUUID())
+                || com.rudues.mod.castle.CastleBoss.inIntro(player)) {
             return;
         }
         if (type == AbilityType.HERO_OF_HELL && (!PowerData.has(player) || com.rudues.mod.trial.TrialManager.inTrial(player))) {

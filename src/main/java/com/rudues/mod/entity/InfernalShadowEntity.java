@@ -133,6 +133,8 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
     private static final RawAnimation FINAL_LOSE = RawAnimation.begin().thenPlayAndHold("animation.infernal_shadow.final_lose");
     private static final RawAnimation PUMMEL_RUSH = RawAnimation.begin().thenLoop("animation.infernal_shadow.pummel_rush");
     private static final RawAnimation PUMMEL = RawAnimation.begin().thenPlayAndHold("animation.infernal_shadow.pummel");
+    /** the Feathered Hold intro: the player's unhurried walk out onto the roof */
+    private static final RawAnimation CASTLE_WALK = RawAnimation.begin().thenLoop("animation.infernal_shadow.castle_walk");
 
     public static final float HELLSCRAPE_DAMAGE = 12.0F;
     public static final float HAMMER_DAMAGE = 16.0F;
@@ -216,6 +218,8 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
     private boolean awakenDone, finalDone;
     /** client only: a stand-in drawn in a player's place (PuppetClient), never added to the world */
     private boolean puppet;
+    /** the clip a stand-in is playing (client only) */
+    public String puppetClip = "";
     /** puppet: draw the corruption growths */
     public boolean puppetCorrupt;
 
@@ -2495,8 +2499,9 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
                 .triggerableAnim("final_charge", FINAL_CHARGE).triggerableAnim("final_strain", FINAL_STRAIN).triggerableAnim("final_strain_p", FINAL_STRAIN_P)
                 .triggerableAnim("final_win", FINAL_WIN).triggerableAnim("final_fall", FINAL_FALL).triggerableAnim("final_lose", FINAL_LOSE)
                 .triggerableAnim("pummel_rush", PUMMEL_RUSH).triggerableAnim("pummel", PUMMEL)
+                .triggerableAnim("castle_walk", CASTLE_WALK)
                 .setAnimationSpeedHandler(e -> {
-            if (e.isInMove()) {
+            if (e.isInMove() || (e.isPuppet() && "castle_walk".equals(e.puppetClip))) {
                 return 1.0;
             }
             // walk loop matched to the actual ground speed

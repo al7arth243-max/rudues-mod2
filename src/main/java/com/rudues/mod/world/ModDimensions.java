@@ -11,6 +11,10 @@ public final class ModDimensions {
     public static final ResourceKey<Level> TRIAL =
             ResourceKey.create(Registries.DIMENSION, new ResourceLocation(RuduesMod.MODID, "infernal_trial"));
 
+    /** the Feathered Knight's castle (data/rudues/dimension/feathered_hold.json) */
+    public static final ResourceKey<Level> CASTLE =
+            ResourceKey.create(Registries.DIMENSION, new ResourceLocation(RuduesMod.MODID, "feathered_hold"));
+
     private ModDimensions() {
     }
 }
