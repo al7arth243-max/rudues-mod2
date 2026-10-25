@@ -135,6 +135,12 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
     private static final RawAnimation PUMMEL = RawAnimation.begin().thenPlayAndHold("animation.infernal_shadow.pummel");
     /** the Feathered Hold intro: the player's unhurried walk out onto the roof */
     private static final RawAnimation CASTLE_WALK = RawAnimation.begin().thenLoop("animation.infernal_shadow.castle_walk");
+    /** Benedikta's scenes: the flaming uppercut against her rubble, and being carried in her talons */
+    private static final RawAnimation RUBBLE_CHARGE = RawAnimation.begin().thenPlayAndHold("animation.infernal_shadow.rubble_charge");
+    private static final RawAnimation RUBBLE_STRAIN = RawAnimation.begin().thenLoop("animation.infernal_shadow.rubble_strain_p");
+    private static final RawAnimation RUBBLE_WIN = RawAnimation.begin().thenPlayAndHold("animation.infernal_shadow.rubble_win_p");
+    private static final RawAnimation RUBBLE_CRUSHED = RawAnimation.begin().thenPlayAndHold("animation.infernal_shadow.rubble_crushed_p");
+    private static final RawAnimation GRABBED = RawAnimation.begin().thenLoop("animation.infernal_shadow.grabbed_p");
 
     public static final float HELLSCRAPE_DAMAGE = 12.0F;
     public static final float HAMMER_DAMAGE = 16.0F;
@@ -2500,8 +2506,11 @@ public class InfernalShadowEntity extends Monster implements GeoEntity {
                 .triggerableAnim("final_win", FINAL_WIN).triggerableAnim("final_fall", FINAL_FALL).triggerableAnim("final_lose", FINAL_LOSE)
                 .triggerableAnim("pummel_rush", PUMMEL_RUSH).triggerableAnim("pummel", PUMMEL)
                 .triggerableAnim("castle_walk", CASTLE_WALK)
+                .triggerableAnim("rubble_charge", RUBBLE_CHARGE).triggerableAnim("rubble_strain_p", RUBBLE_STRAIN)
+                .triggerableAnim("rubble_win_p", RUBBLE_WIN).triggerableAnim("rubble_crushed_p", RUBBLE_CRUSHED)
+                .triggerableAnim("grabbed_p", GRABBED)
                 .setAnimationSpeedHandler(e -> {
-            if (e.isInMove() || (e.isPuppet() && "castle_walk".equals(e.puppetClip))) {
+            if (e.isInMove() || (e.isPuppet() && ("castle_walk".equals(e.puppetClip) || e.puppetClip.startsWith("rubble_") || "grabbed_p".equals(e.puppetClip)))) {
                 return 1.0;
             }
             // walk loop matched to the actual ground speed

@@ -25,6 +25,10 @@ import net.minecraft.world.phys.Vec3;
  */
 public class AerogaOrbEntity extends Projectile {
     private static final EntityDataAccessor<Boolean> LAUNCHED = SynchedEntityData.defineId(AerogaOrbEntity.class, EntityDataSerializers.BOOLEAN);
+    /** -1: the single Aeroga over her hand; 0..2: one of Triple Aeroga's three (over her head, left, right) */
+    private static final EntityDataAccessor<Integer> SLOT = SynchedEntityData.defineId(AerogaOrbEntity.class, EntityDataSerializers.INT);
+    public static final float SMALL = 1.3F;
+    public static final int TRIPLE_GROW = KnightMoveData.TRIPLE_AEROGA_THROW1 - KnightMoveData.TRIPLE_AEROGA_GATHER;
     /** ticks it takes to gather to full size */
     public static final int GROW = KnightMoveData.AEROGA_LAUNCH - KnightMoveData.AEROGA_GATHER;
     public static final float SIZE = 1.7F;
@@ -37,15 +41,25 @@ public class AerogaOrbEntity extends Projectile {
     }
 
     public AerogaOrbEntity(Level level, FeatheredKnightEntity owner) {
+        this(level, owner, -1);
+    }
+
+    public AerogaOrbEntity(Level level, FeatheredKnightEntity owner, int slot) {
         this(ModEntities.AEROGA_ORB.get(), level);
         setOwner(owner);
-        Vec3 a = owner.orbAnchor(1.0F);
+        this.entityData.set(SLOT, slot);
+        Vec3 a = owner.orbAnchor(slot, 1.0F);
         setPos(a.x, a.y - 0.5, a.z);
+    }
+
+    public int slot() {
+        return this.entityData.get(SLOT);
     }
 
     @Override
     protected void defineSynchedData() {
         this.entityData.define(LAUNCHED, false);
+        this.entityData.define(SLOT, -1);
     }
 
     public boolean launched() {
@@ -54,11 +68,12 @@ public class AerogaOrbEntity extends Projectile {
 
     /** the orb's size now (blocks across) */
     public float size(float partialTick) {
+        float full = slot() >= 0 ? SMALL : SIZE;
         if (launched()) {
-            return SIZE;
+            return full;
         }
-        float k = Mth.clamp((tickCount + partialTick) / GROW, 0.0F, 1.0F);
-        return SIZE * (0.15F + 0.85F * (1.0F - (1.0F - k) * (1.0F - k)));
+        float k = Mth.clamp((tickCount + partialTick) / (slot() >= 0 ? TRIPLE_GROW : GROW), 0.0F, 1.0F);
+        return full * (0.15F + 0.85F * (1.0F - (1.0F - k) * (1.0F - k)));
     }
 
     public void launch(Vec3 target) {
@@ -74,7 +89,7 @@ public class AerogaOrbEntity extends Projectile {
         if (!launched()) {
             // held up over her hand
             if (getOwner() instanceof FeatheredKnightEntity k && k.isAlive()) {
-                Vec3 a = k.orbAnchor(1.0F);
+                Vec3 a = k.orbAnchor(slot(), 1.0F);
                 setPos(a.x, a.y - 0.5, a.z);
             } else if (!level().isClientSide) {
                 discard();

@@ -344,6 +344,14 @@ public class HeroForm {
     }
 
     // ------------------------------------------------------------------ ending
+    /** out of the Hero of Hell form (or its flame pillar) at once, for a scripted scene */
+    public static void revert(ServerPlayer p) {
+        State s = STATES.get(p.getUUID());
+        if (s != null && s.phase != 0) {
+            endForm(p, s, false);
+        }
+    }
+
     private static void endForm(ServerPlayer p, State s, boolean natural) {
         cleanupVisuals(p, s);
         s.phase = 0;

@@ -14,13 +14,6 @@
         "type": "minecraft:white_ash"
       },
       "probability": 0.004
-    },
-    "ambient_sound": "minecraft:ambient.cave",
-    "mood_sound": {
-      "sound": "minecraft:ambient.cave",
-      "tick_delay": 6000,
-      "block_search_extent": 8,
-      "offset": 2.0
     }
   },
   "spawners": {},

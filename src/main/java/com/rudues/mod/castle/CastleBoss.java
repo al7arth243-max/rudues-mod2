@@ -203,9 +203,18 @@ public final class CastleBoss {
     /** the scene can't be interrupted: the player can't be hurt or hurt anything until it's over */
     @SubscribeEvent
     public static void onAttack(LivingAttackEvent event) {
-        if (event.getEntity() instanceof Player p && !p.level().isClientSide && inIntro(p)) {
+        if (event.getEntity() instanceof Player p && !p.level().isClientSide && (inIntro(p) || FeatheredKnightEntity.shielded(p))) {
             event.setCanceled(true);
-        } else if (event.getSource().getEntity() instanceof Player p && !p.level().isClientSide && inIntro(p)) {
+        } else if (event.getSource().getEntity() instanceof Player p && !p.level().isClientSide && (inIntro(p) || FeatheredKnightEntity.inScene(p))) {
+            event.setCanceled(true);
+        }
+    }
+
+    /** caught in Benedikta's talons, you stay caught until she lets go */
+    @SubscribeEvent
+    public static void onMount(net.minecraftforge.event.entity.EntityMountEvent event) {
+        if (event.isDismounting() && event.getEntityBeingMounted() instanceof FeatheredKnightEntity k && !k.letGo && k.isAlive()
+                && event.getEntityMounting() instanceof Player) {
             event.setCanceled(true);
         }
     }

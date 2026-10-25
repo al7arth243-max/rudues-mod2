@@ -41,6 +41,7 @@ public class ClientModEvents {
         event.registerEntityRenderer(ModEntities.AEROGA_ORB.get(), WindRenderers.Orb::new);
         event.registerEntityRenderer(ModEntities.TORNADO.get(), WindRenderers.Tornado::new);
         event.registerEntityRenderer(ModEntities.WIND_BLADE.get(), WindRenderers.Blade::new);
+        event.registerEntityRenderer(ModEntities.RUBBLE.get(), RubbleRenderer::new);
     }
 
     /** awakened players wear the Shadow's corruption (both skin models) */

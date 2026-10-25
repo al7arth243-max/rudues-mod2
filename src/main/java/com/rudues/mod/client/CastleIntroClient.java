@@ -151,7 +151,7 @@ public final class CastleIntroClient {
             // B: close, from the arena side, by the shoulder she looks back over - the back of her head, then her face
             float k = smooth((t - KnightIntro.SHOT_B) / (float) (KnightIntro.SHOT_C - KnightIntro.SHOT_B));
             double s = 1.0 - 0.16 * k;
-            Vec3 eye = head.add(1.1 * s, 0.75, -1.3 * s);
+            Vec3 eye = head.add(-1.1 * s, 0.75, -1.3 * s);
             return new Shot(eye, head.add(0, -0.25, 0), 52.0F);
         }
         // C: low beside where she lands - she drops into the foreground, you beyond her

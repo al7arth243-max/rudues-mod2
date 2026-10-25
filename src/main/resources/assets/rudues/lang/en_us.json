@@ -103,12 +103,17 @@
   "block.rudues.castle_portal": "Feathered Hold Portal",
   "message.rudues.castle_portal_opened": "The calcite drinks the emerald. Wind howls from the ring.",
   "message.rudues.castle_needs_power": "The ring will not take you. Only the bearer of the power of Rage may cross.",
-  "entity.rudues.feathered_knight": "The Feathered Knight",
+  "entity.rudues.feathered_knight": "Benedikta",
   "entity.rudues.wind_bolt": "Wind Bolt",
   "entity.rudues.aeroga_orb": "Aeroga",
   "entity.rudues.wind_tornado": "Tornado",
   "entity.rudues.wind_blade": "Wind Blade",
-  "gui.rudues.knight_title": "Mistress of the Feathered Hold",
+  "gui.rudues.knight_title": "The Feathered Knight",
   "message.rudues.knight_arrives": "She raises her rapier.",
-  "message.rudues.knight_defeated": "The Feathered Knight falls. The wind dies on the roof."
+  "message.rudues.knight_defeated": "Benedikta falls. The wind dies on the roof.",
+  "message.rudues.knight_semi": "Benedikta rises. Semi Prime!",
+  "message.rudues.rubble_clash": "Hold it back!",
+  "message.rudues.rubble_won": "SHATTERED",
+  "message.rudues.rubble_lost": "CRUSHED",
+  "entity.rudues.rubble": "Rubble"
 }

@@ -16,6 +16,7 @@ import com.rudues.mod.entity.WindBoltEntity;
 import com.rudues.mod.entity.AerogaOrbEntity;
 import com.rudues.mod.entity.TornadoEntity;
 import com.rudues.mod.entity.WindBladeEntity;
+import com.rudues.mod.entity.RubbleEntity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraftforge.registries.DeferredRegister;
@@ -99,4 +100,9 @@ public class ModEntities {
             () -> EntityType.Builder.<WindBladeEntity>of(WindBladeEntity::new, MobCategory.MISC)
                     .sized(1.0F, 0.5F).fireImmune().clientTrackingRange(8).updateInterval(1)
                     .build("wind_blade"));
+    /** the roof chunk Benedikta tears up for her Semi Prime scene */
+    public static final RegistryObject<EntityType<RubbleEntity>> RUBBLE = ENTITIES.register("rubble",
+            () -> EntityType.Builder.<RubbleEntity>of(RubbleEntity::new, MobCategory.MISC)
+                    .sized(RubbleEntity.SIZE, RubbleEntity.SIZE).fireImmune().noSave().clientTrackingRange(10).updateInterval(1)
+                    .build("rubble"));
 }

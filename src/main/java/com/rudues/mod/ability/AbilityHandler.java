@@ -44,7 +44,9 @@ public class AbilityHandler {
         }
         if (Pummel.busy(player) || HeroForm.inClash(player) || HeroForm.transforming(player) || SemiPrime.transforming(player)
                 || com.rudues.mod.entity.InfernalShadowEntity.AWAKENING.contains(player.getUUID())
-                || com.rudues.mod.castle.CastleBoss.inIntro(player)) {
+                || com.rudues.mod.castle.CastleBoss.inIntro(player)
+                || com.rudues.mod.entity.FeatheredKnightEntity.inScene(player)
+                || player.getVehicle() instanceof com.rudues.mod.entity.FeatheredKnightEntity) {
             return;
         }
         if (type == AbilityType.HERO_OF_HELL && (!PowerData.has(player) || com.rudues.mod.trial.TrialManager.inTrial(player))) {

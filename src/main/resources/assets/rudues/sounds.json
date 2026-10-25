@@ -1,8 +1,26 @@
 {
   "music.infernal_shadow": {
-    "sounds": [{"name": "rudues:music/infernal_shadow_theme", "stream": true}]
+    "sounds": [
+      {
+        "name": "rudues:music/infernal_shadow_theme",
+        "stream": true
+      }
+    ]
   },
   "music.infernal_hero": {
-    "sounds": [{"name": "rudues:music/infernal_hero_theme", "stream": true}]
+    "sounds": [
+      {
+        "name": "rudues:music/infernal_hero_theme",
+        "stream": true
+      }
+    ]
+  },
+  "music.benedikta": {
+    "sounds": [
+      {
+        "name": "rudues:music/benedikta_theme",
+        "stream": true
+      }
+    ]
   }
 }

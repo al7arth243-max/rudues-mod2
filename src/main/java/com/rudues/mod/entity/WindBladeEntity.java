@@ -49,6 +49,16 @@ public class WindBladeEntity extends Projectile {
         setYRot(owner.yBodyRot);
     }
 
+    /** a blade already loosed (Swarm's wind slash from her hand) */
+    public WindBladeEntity(Level level, FeatheredKnightEntity owner, Vec3 at, Vec3 dir) {
+        this(ModEntities.WIND_BLADE.get(), level);
+        setOwner(owner);
+        setPos(at.x, at.y, at.z);
+        fire(dir);
+        yRotO = getYRot();
+        xRotO = getXRot();
+    }
+
     @Override
     protected void defineSynchedData() {
         this.entityData.define(FIRED, false);

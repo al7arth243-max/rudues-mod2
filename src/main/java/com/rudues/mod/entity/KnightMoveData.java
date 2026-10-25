@@ -42,4 +42,68 @@ public final class KnightMoveData {
     public static final int WIND_BLADE_FORM = 6;
     public static final int WIND_BLADE_RELEASE = 38;
 
+    public static final int SEMI_TRANSFORM_END = 60;
+    public static final int SEMI_TRANSFORM_SEMI = 25;
+    public static final int SEMI_TRANSFORM_BURST = 28;
+
+    public static final int SEMI_ASCEND_END = 40;
+    public static final int SEMI_ASCEND_LIFT = 3;
+    public static final float[] SEMI_ASCEND_GRIP = {0.836F, -0.015F, -0.923F};
+
+    public static final int RUBBLE_DIVE_END = 30;
+    public static final int RUBBLE_DIVE_GO = 10;
+    public static final float[] RUBBLE_DIVE_GRIP = {0.347F, 0.000F, -0.030F};
+
+    public static final float[] RUBBLE_STRAIN_GRIP = {0.245F, -0.000F, 0.083F};
+
+    public static final int RUBBLE_KNOCKED_END = 50;
+    public static final int RUBBLE_KNOCKED_LAND = 26;
+    public static final int RUBBLE_KNOCKED_UP = 44;
+
+    public static final int RUBBLE_RELEASE_END = 28;
+
+    public static final int NOSEDIVE_RISE_END = 20;
+
+    public static final int DIVE_END = 40;
+    public static final int DIVE_FOLD = 12;
+    public static final int DIVE_HIT = 18;
+    public static final int DIVE_RISE = 30;
+
+    public static final int SWARM_END = 76;
+    public static final int SWARM_BACK_END = 12;
+    public static final int SWARM_ARC_END = 52;
+    public static final int SWARM_SHOT1 = 25;
+    public static final int SWARM_SHOT2 = 40;
+    public static final int SWARM_SLASH = 61;
+    public static final float[] SWARM_HAND = {0.898F, 0.024F, 1.184F};
+
+    public static final int TRIPLE_AEROGA_END = 68;
+    public static final int TRIPLE_AEROGA_GATHER = 10;
+    public static final int TRIPLE_AEROGA_THROW1 = 35;
+    public static final int TRIPLE_AEROGA_THROW2 = 42;
+    public static final int TRIPLE_AEROGA_THROW3 = 49;
+    public static final float[] TRIPLE_AEROGA_ORB0 = {-0.066F, 0.132F, 2.878F};
+    public static final float[] TRIPLE_AEROGA_ORB1 = {0.172F, -0.170F, 2.525F};
+    public static final float[] TRIPLE_AEROGA_ORB2 = {-0.046F, 0.134F, 2.550F};
+
+    public static final int SLASH_LAUNCH_END = 60;
+    public static final int SLASH_LAUNCH_DASH = 8;
+    public static final int SLASH_LAUNCH_RAKE = 19;
+    public static final int SLASH_LAUNCH_SMASH = 32;
+    public static final int SLASH_LAUNCH_DISMISS = 51;
+
+    public static final int RAIN_VOLLEY_END = 16;
+    public static final int RAIN_VOLLEY_FIRE = 7;
+
+    public static final int GRINDER_SCREECH_END = 24;
+    public static final int GRINDER_SCREECH_SCREECH = 10;
+
+    public static final float[] GRINDER_CARRY_GRIP = {0.616F, 0.000F, 0.096F};
+
+    public static final int GRINDER_HURL_END = 24;
+    public static final int GRINDER_HURL_THROW = 8;
+
+    public static final float[] PLAYER_CHARGE_FIST = {-0.029F, 0.515F, 0.994F};
+    public static final float[] PLAYER_STRAIN_FIST = {0.160F, 0.252F, 1.850F};
+
 }
