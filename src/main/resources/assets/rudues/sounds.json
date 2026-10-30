@@ -22,5 +22,13 @@
         "stream": true
       }
     ]
+  },
+  "music.garuda": {
+    "sounds": [
+      {
+        "name": "rudues:music/garuda_theme",
+        "stream": true
+      }
+    ]
   }
 }

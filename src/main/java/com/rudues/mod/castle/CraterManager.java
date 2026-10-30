@@ -119,6 +119,7 @@ public final class CraterManager {
             return;
         }
         for (ServerPlayer p : level.players()) {
+            com.rudues.mod.entity.GarudaEntity.watch(level, p);
             if (p.isSpectator() || p.isCreative()) {
                 continue;
             }

@@ -10,8 +10,12 @@ import net.minecraft.world.phys.Vec3;
  * ARRIVE    the storm clears on the Hero of Hell rising from his pillar of fire and roaring; her screech cuts it short,
  *           she sweeps past his right side, turns at a distance and faces him
  * the end fight, at 5% of her health:
- * CAST      her tornado throws him into the sky
- * BALL      she gathers a great ball of wind between her hands and wings and drives it up at him; he comes down fist first
+ * BLAST     a blast of wind from her hand tears his right arm off at the elbow
+ * SNATCH    she lunges feet first and takes his chest in her talons: up, slammed down on his back and pinned while she
+ *           screeches, up again, slammed again, then hurled into the sky
+ * BALL      high up, his arm burns back out of the stump while she spreads her wings and gathers a great ball of wind
+ *           between her hands; she drives it up at him and he comes down fist first
+ * CAST      (only after a lost clash) her tornado throws him back into the sky, and BALL again
  * STRAIN1   the first clash: his push sets the ball alight
  * WIN1      he drives the fireball down onto her - it bursts, she is thrown down       (LOSE1: it bursts on him; again)
  * GRAB      he strides in, takes her by the throat and lifts her
@@ -26,11 +30,13 @@ public final class GarudaScene {
     }
 
     public static final int NONE = -1, ARRIVE = 0, CAST = 1, BALL = 2, STRAIN1 = 3, WIN1 = 4, LOSE1 = 5, GRAB = 6, PUNCH = 7, KICK = 8,
-            STRAIN2 = 9, LOSE2 = 10, HELL = 11, DOWN = 12;
+            STRAIN2 = 9, LOSE2 = 10, HELL = 11, DOWN = 12, BLAST = 13, SNATCH = 14;
 
     public static int length(int stage) {
         return switch (stage) {
             case ARRIVE -> ARRIVE_END;
+            case BLAST -> 64;
+            case SNATCH -> GarudaMoveData.SNATCH_END;
             case CAST -> GarudaMoveData.TORNADO_CAST_END;
             case BALL -> GarudaMoveData.WINDBALL_FORM_END + 8;
             case STRAIN1, STRAIN2 -> STRAIN_MAX;
@@ -104,6 +110,43 @@ public final class GarudaScene {
         return ball.add(0, 2.2, 2.0);
     }
 
+    /** a per-tick track (GarudaMoveData), sampled between ticks */
+    public static float track(float[] a, float t) {
+        if (t <= 0) {
+            return a[0];
+        }
+        int i = (int) Math.floor(t);
+        if (i >= a.length - 1) {
+            return a[a.length - 1];
+        }
+        float f = t - i;
+        return a[i] + (a[i + 1] - a[i]) * f;
+    }
+
+    /** where she is through the snatch (her talons on his chest from the grab to the throw) */
+    public static Vec3 herSnatch(float t) {
+        return heroSpot().add(track(GarudaMoveData.SNATCH_HER_X, t), track(GarudaMoveData.SNATCH_HER_Y, t), track(GarudaMoveData.SNATCH_HER_Z, t));
+    }
+
+    /** the stump of his right arm through the snatch */
+    public static Vec3 stumpSnatch(float t) {
+        return heroSpot().add(track(GarudaMoveData.SNATCH_STUMP_X, t), track(GarudaMoveData.SNATCH_STUMP_Y, t), track(GarudaMoveData.SNATCH_STUMP_Z, t));
+    }
+
+    /** where the wind blast leaves her hand, and where it takes his arm */
+    public static Vec3 blastHand() {
+        return heroSpot().add(GarudaMoveData.WIND_BLAST_HAND_X, GarudaMoveData.WIND_BLAST_HAND_Y, GarudaMoveData.WIND_BLAST_HAND_Z);
+    }
+
+    public static Vec3 blastStump() {
+        return heroSpot().add(GarudaMoveData.WIND_BLAST_STUMP_X, GarudaMoveData.WIND_BLAST_STUMP_Y, GarudaMoveData.WIND_BLAST_STUMP_Z);
+    }
+
+    /** the stump (then the new arm) while he hangs in the sky in BALL, from where he is drawn */
+    public static Vec3 regrowArm(Vec3 hero, float t) {
+        return hero.add(track(GarudaMoveData.REGROW_X, t), track(GarudaMoveData.REGROW_Y, t), track(GarudaMoveData.REGROW_Z, t));
+    }
+
     public static Vec3 floor(double x, double z) {
         return new Vec3(x, CraterLayout.surface((int) Math.floor(x), (int) Math.floor(z)) + 1, z);
     }
@@ -121,17 +164,23 @@ public final class GarudaScene {
         Vec3 h = heroSpot(), g = herSpot();
         Vec3 grab = g.add(0, 0, 4.4);
         switch (stage) {
+            case BLAST -> {
+                return h;
+            }
+            case SNATCH -> {
+                return h.add(track(GarudaMoveData.SNATCH_HERO_X, t), track(GarudaMoveData.SNATCH_HERO_Y, t), track(GarudaMoveData.SNATCH_HERO_Z, t));
+            }
             case CAST -> {
                 int c = GarudaMoveData.TORNADO_CAST_CAST;
                 if (t < c) {
                     return h;
                 }
-                return h.add(0, SKY * ease((t - c) / (double) (length(CAST) - c + 6)), 0);
+                return h.add(0, SKY * ease((t - c) / (double) (length(CAST) - c)), 0);
             }
             case BALL -> {
                 // hanging in the sky, then down at the ball fist first as she lets it go
                 double k = (t - (GarudaMoveData.WINDBALL_FORM_SHOOT - 4)) / 12.0;
-                Vec3 sky = h.add(0, SKY, 0);
+                Vec3 sky = h.add(0, SKY + 0.35 * Math.sin(Math.min(t, GarudaMoveData.WINDBALL_FORM_SHOOT - 4) * 0.12), 0);
                 return sky.lerp(onBall(ballStrain(START_BALANCE)), ease(k));
             }
             case STRAIN1 -> {

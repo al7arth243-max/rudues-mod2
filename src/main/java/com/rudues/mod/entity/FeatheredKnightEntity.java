@@ -721,6 +721,11 @@ public class FeatheredKnightEntity extends Monster implements GeoEntity {
         return SHIELDED.containsKey(p.getUUID());
     }
 
+    /** let go of a player for good (they have been carried off to Garuda's crater); true if she still held them */
+    public static boolean release(Player p) {
+        return SHIELDED.remove(p.getUUID()) != null;
+    }
+
     public int sceneStage() {
         return this.entityData.get(SCENE);
     }
@@ -1106,7 +1111,7 @@ public class FeatheredKnightEntity extends Monster implements GeoEntity {
         com.rudues.mod.castle.CraterManager.bring(p);
         GarudaEntity g = com.rudues.mod.registry.ModEntities.GARUDA.get().create(crater);
         if (g != null) {
-            Vec3 s = GarudaScene.flyFrom().add(0, 20, 30);
+            Vec3 s = GarudaScene.flyFrom();
             g.moveTo(s.x, s.y, s.z, 180.0F, 0.0F);
             crater.addFreshEntity(g);
             g.beginArrival(p);

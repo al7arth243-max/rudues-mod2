@@ -79,7 +79,7 @@ public class DemonEntity extends Entity implements GeoEntity {
     // the Garuda end fight
     private static final String[][] GARUDA = {{"hg_launched", "hold"}, {"hg_push", "loop"}, {"hg_push_win", "once"}, {"hg_push_lose", "hold"},
             {"hg_neck_grab", "hold"}, {"hg_neck_punch", "loop"}, {"hg_kicked", "hold"}, {"hg_burn", "loop"}, {"hg_hellfire", "once"},
-            {"hg_burn_lose", "once"}};
+            {"hg_burn_lose", "once"}, {"hg_arm_blown", "hold"}, {"hg_snatched", "hold"}, {"hg_regrow", "hold"}};
 
     /** length of the spawn/roar animation in ticks */
     private static final int INTRO_TICKS = 28;

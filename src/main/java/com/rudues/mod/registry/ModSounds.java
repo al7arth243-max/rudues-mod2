@@ -15,6 +15,8 @@ public class ModSounds {
     public static final RegistryObject<SoundEvent> HERO_THEME = register("music.infernal_hero");
     /** Benedikta, the Feathered Knight: "To Sail Forbidden Seas" */
     public static final RegistryObject<SoundEvent> BENEDIKTA_THEME = register("music.benedikta");
+    /** Garuda, in the storm crater: "Control" */
+    public static final RegistryObject<SoundEvent> GARUDA_THEME = register("music.garuda");
 
     private static RegistryObject<SoundEvent> register(String name) {
         return SOUNDS.register(name, () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(RuduesMod.MODID, name)));

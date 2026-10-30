@@ -68,6 +68,12 @@ public class GarudaEntity extends Monster implements GeoEntity {
     private static final EntityDataAccessor<Integer> SCENE_PLAYER = SynchedEntityData.defineId(GarudaEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> HIDDEN = SynchedEntityData.defineId(GarudaEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> BURNT = SynchedEntityData.defineId(GarudaEntity.class, EntityDataSerializers.BOOLEAN);
+    /** the first BALL of the end fight: his arm is growing back up there (the camera stays on him) */
+    private static final EntityDataAccessor<Boolean> REGROW = SynchedEntityData.defineId(GarudaEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final net.minecraft.core.particles.DustParticleOptions ICHOR =
+            new net.minecraft.core.particles.DustParticleOptions(new org.joml.Vector3f(0.42F, 0.02F, 0.06F), 1.6F);
+    private static final net.minecraft.core.particles.BlockParticleOption RUBBLE =
+            new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, net.minecraft.world.level.block.Blocks.BLACKSTONE.defaultBlockState());
 
     public static final float SCALE = 1.5F;
     public static final double MAX_HEALTH = 3500.0;
@@ -79,7 +85,8 @@ public class GarudaEntity extends Monster implements GeoEntity {
     public static final int MOVE_NONE = 0, MOVE_BARRAGE = 1, MOVE_CLAWS = 2, MOVE_TORNADOES = 3, MOVE_SHOT = 4, MOVE_SCREECH = 5, MOVE_SCENE = 9;
     private static final String P = "animation.garuda.";
     private static final String[] ANIMS = {"idle", "fly", "flyby", "land_face", "barrage", "claws", "tornadoes", "quick_shot", "screech", "zoom",
-            "tornado_cast", "windball_form", "windball_strain", "windball_blast", "lie", "neck_held", "neck_kick", "arms_held", "blown_away"};
+            "tornado_cast", "windball_form", "windball_strain", "windball_blast", "lie", "neck_held", "neck_kick", "arms_held", "blown_away",
+            "wind_blast", "snatch"};
     private static final java.util.Set<String> LOOPS = java.util.Set.of("idle", "fly", "zoom", "windball_strain", "lie", "neck_held", "arms_held");
     private static final RawAnimation[] RAW = new RawAnimation[ANIMS.length];
     static {
@@ -92,6 +99,7 @@ public class GarudaEntity extends Monster implements GeoEntity {
 
     /** players held in one of her scenes: hits on them are refused unless the scene lets one through */
     private static final Map<UUID, Boolean> SHIELDED = new ConcurrentHashMap<>();
+    private static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
 
     public static void shield(Player p) {
         SHIELDED.put(p.getUUID(), false);
@@ -106,18 +114,37 @@ public class GarudaEntity extends Monster implements GeoEntity {
         return SHIELDED.containsKey(p.getUUID());
     }
 
+    /**
+     * A scene shield only lasts while the Garuda playing that scene is alive and ticking. If she is gone or stalled
+     * (unloaded, removed by something else) the player is let go after five seconds rather than left untouchable.
+     */
+    public static void watch(ServerLevel level, ServerPlayer p) {
+        if (!SHIELDED.containsKey(p.getUUID())) {
+            return;
+        }
+        long now = level.getGameTime();
+        for (GarudaEntity g : level.getEntities(com.rudues.mod.registry.ModEntities.GARUDA.get(), e -> e.isAlive() && p.getUUID().equals(e.foe))) {
+            if (now - g.lastTicked < 100) {
+                return;
+            }
+        }
+        SHIELDED.remove(p.getUUID());
+        LOGGER.warn("Garuda: no scene is running for {}; released them", p.getGameProfile().getName());
+    }
+
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private final ServerBossEvent bossBar = new ServerBossEvent(Component.translatable("entity.rudues.garuda"),
             BossEvent.BossBarColor.GREEN, BossEvent.BossBarOverlay.NOTCHED_10);
     @Nullable
     private UUID foe;
     private int stageT, moveTick, cooldown = 30, tornadoCooldown, lastMove, pressesThisTick, seenAnimStart = Integer.MIN_VALUE;
-    private boolean pendingFinale, ended;
+    private boolean pendingFinale, ended, warnedFree;
+    private long lastTicked;
     private float moveYaw;
     private Vec3 mFrom = Vec3.ZERO, mLock = Vec3.ZERO, mDir = Vec3.ZERO;
     private final java.util.Set<UUID> hit = new java.util.HashSet<>();
     @Nullable
-    private WindBallEntity ball;
+    private WindBallEntity ball, blastOrb;
 
     public GarudaEntity(EntityType<? extends GarudaEntity> type, Level level) {
         super(type, level);
@@ -147,6 +174,7 @@ public class GarudaEntity extends Monster implements GeoEntity {
         this.entityData.define(SCENE_PLAYER, -1);
         this.entityData.define(HIDDEN, false);
         this.entityData.define(BURNT, false);
+        this.entityData.define(REGROW, false);
     }
 
     // ------------------------------------------------------------ queries (both sides)
@@ -168,6 +196,10 @@ public class GarudaEntity extends Monster implements GeoEntity {
 
     public boolean hidden() {
         return this.entityData.get(HIDDEN);
+    }
+
+    public boolean regrowing() {
+        return this.entityData.get(REGROW);
     }
 
     /** after the hellfire: charred, her arms gone */
@@ -199,10 +231,11 @@ public class GarudaEntity extends Monster implements GeoEntity {
     /** set up in the crater for this player: hidden far behind them until her cue */
     public void beginArrival(ServerPlayer p) {
         foe = p.getUUID();
+        lastTicked = level().getGameTime();
         shield(p);
         this.entityData.set(SCENE_PLAYER, p.getId());
         this.entityData.set(HIDDEN, true);
-        Vec3 s = GarudaScene.flyFrom().add(0, 20, 30);
+        Vec3 s = GarudaScene.flyFrom();
         setPos(s.x, s.y, s.z);
         setMove(MOVE_SCENE);
         setStage(GarudaScene.ARRIVE);
@@ -231,6 +264,32 @@ public class GarudaEntity extends Monster implements GeoEntity {
         if (p.position().distanceToSqr(at) > 0.09) {
             p.connection.teleport(at.x, at.y, at.z, yaw, 0.0F);
         }
+    }
+
+    /**
+     * Out of her scenes: clear everything the castle fight and the cinematics put on the player (scene shields, a
+     * Semi Prime power-up, a clash lock, the transformation's invulnerability). True if anything was still set.
+     */
+    private boolean freePlayer(ServerPlayer p) {
+        boolean fixed = SHIELDED.remove(p.getUUID()) != null;
+        fixed |= FeatheredKnightEntity.release(p);
+        if (SemiPrime.transforming(p)) {
+            SemiPrime.end(p, false);
+            fixed = true;
+        }
+        if (HeroForm.inClash(p)) {
+            HeroForm.setClash(p, false);
+            fixed = true;
+        }
+        if (p.isInvulnerable() && !HeroForm.transforming(p) && !p.isCreative() && !p.isSpectator()) {
+            p.setInvulnerable(false);
+            fixed = true;
+        }
+        if (hidden()) {
+            this.entityData.set(HIDDEN, false);
+            fixed = true;
+        }
+        return fixed;
     }
 
     private void tickArrive(ServerPlayer p) {
@@ -275,7 +334,10 @@ public class GarudaEntity extends Monster implements GeoEntity {
         if (t >= GarudaScene.ARRIVE_END) {
             setStage(GarudaScene.NONE);
             this.entityData.set(SCENE_PLAYER, -1);
+            this.entityData.set(HIDDEN, false);
             SHIELDED.remove(p.getUUID());
+            freePlayer(p);
+            HeroForm.sync(p);
             clearAnim();
             setMove(MOVE_NONE);
             noPhysics = false;
@@ -305,6 +367,7 @@ public class GarudaEntity extends Monster implements GeoEntity {
         }
         setNoGravity(true);
         fallDistance = 0;
+        lastTicked = level().getGameTime();
         ServerPlayer p = foePlayer();
         if (ended) {
             tickEnded();
@@ -331,6 +394,11 @@ public class GarudaEntity extends Monster implements GeoEntity {
         // the Hero of Hell form holds while she lives
         if (tickCount % 20 == 0) {
             HeroForm.forceForm(p);
+        }
+        // and nothing from the castle or her scenes may still hold him: he must be able to hit and be hit
+        if (tickCount % 10 == 0 && freePlayer(p) && !warnedFree) {
+            warnedFree = true;
+            LOGGER.warn("Garuda: {} was still held by a finished scene; released", p.getGameProfile().getName());
         }
         HeroForm.sustain(p);
         if (tornadoCooldown > 0) {
@@ -607,13 +675,42 @@ public class GarudaEntity extends Monster implements GeoEntity {
         pendingFinale = false;
         move = MOVE_SCENE;
         shield(p);
+        HeroForm.setClash(p, true);          // whatever move he was in the middle of stops; the scene drives the demon
         this.entityData.set(SCENE_PLAYER, p.getId());
         this.entityData.set(BALANCE, GarudaScene.START_BALANCE);
         for (net.minecraft.world.entity.projectile.Projectile pr : level().getEntitiesOfClass(net.minecraft.world.entity.projectile.Projectile.class,
                 getBoundingBox().inflate(96), e -> e.getOwner() == this)) {
             pr.discard();
         }
-        beginCast(p);
+        for (TornadoEntity tw : level().getEntitiesOfClass(TornadoEntity.class, getBoundingBox().inflate(96))) {
+            tw.discard();
+        }
+        beginBlast(p);
+    }
+
+    /** the end fight opens on her wind blast taking his arm */
+    private void beginBlast(ServerPlayer p) {
+        Vec3 h = GarudaScene.heroSpot(), g = GarudaScene.herSpot();
+        p.connection.teleport(h.x, h.y, h.z, GarudaScene.HERO_YAW, 0.0F);
+        noPhysics = true;
+        glide(g.add(0, 2.4, 0));
+        faceYaw(GarudaScene.HER_YAW);
+        setStage(GarudaScene.BLAST);
+        setAnim("wind_blast");
+        HeroForm.triggerAvatar(p, "hg_arm_blown");
+        playSound(SoundEvents.PHANTOM_AMBIENT, 3.0F, 0.6F);
+    }
+
+    private void beginBall(boolean first) {
+        setStage(GarudaScene.BALL);
+        setAnim("windball_form");
+        this.entityData.set(REGROW, first);
+        if (ball != null) {
+            ball.discard();
+        }
+        ball = new WindBallEntity(level(), GarudaScene.ballLow());
+        level().addFreshEntity(ball);
+        playSound(SoundEvents.ILLUSIONER_PREPARE_MIRROR, 3.0F, 0.5F);
     }
 
     private void beginCast(ServerPlayer p) {
@@ -624,6 +721,7 @@ public class GarudaEntity extends Monster implements GeoEntity {
         faceYaw(GarudaScene.HER_YAW);
         setStage(GarudaScene.CAST);
         setAnim("tornado_cast");
+        this.entityData.set(REGROW, false);
         this.entityData.set(BALANCE, GarudaScene.START_BALANCE);
         playSound(SoundEvents.PHANTOM_AMBIENT, 3.0F, 0.5F);
     }
@@ -660,6 +758,8 @@ public class GarudaEntity extends Monster implements GeoEntity {
         HeroForm.sustain(p);
         Vec3 hero = GarudaScene.heroAt(st, t, balance());
         switch (st) {
+            case GarudaScene.BLAST -> tickBlast(p, sl, t);
+            case GarudaScene.SNATCH -> tickSnatch(p, sl, t);
             case GarudaScene.CAST -> {
                 glide(g.add(0, 0.8 + 0.1 * Math.sin(t * 0.2), 0));
                 if (t == GarudaMoveData.TORNADO_CAST_CAST) {
@@ -673,16 +773,24 @@ public class GarudaEntity extends Monster implements GeoEntity {
                     sl.sendParticles(FeatheredKnightEntity.gust(), hero.x, hero.y - 2, hero.z, 30, 2.0, 3.0, 2.0, 0);
                 }
                 if (t >= GarudaScene.length(st)) {
-                    setStage(GarudaScene.BALL);
-                    setAnim("windball_form");
-                    ball = new WindBallEntity(level(), GarudaScene.ballLow());
-                    level().addFreshEntity(ball);
-                    playSound(SoundEvents.ILLUSIONER_PREPARE_MIRROR, 3.0F, 0.5F);
+                    beginBall(false);
                 }
             }
             case GarudaScene.BALL -> {
                 glide(g.add(0, 0.3, 0));
+                faceYaw(GarudaScene.HER_YAW);
                 int shoot = GarudaMoveData.WINDBALL_FORM_SHOOT;
+                if (regrowing() && hero != null) {
+                    tickRegrow(p, sl, t, hero);
+                }
+                if (t > 6 && t < shoot && t % 2 == 0) {
+                    // the wind drawn in from all round into the ball
+                    Vec3 c = GarudaScene.ballLow();
+                    double a = random.nextDouble() * Math.PI * 2, r = 5 + random.nextDouble() * 4;
+                    sl.sendParticles(FeatheredKnightEntity.gust(), c.x + Math.cos(a) * r, c.y - 2 + random.nextDouble() * 4, c.z + Math.sin(a) * r,
+                            0, -Math.cos(a), 0.05, -Math.sin(a), 0.6);
+                    sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, getX(), getY() + 4, getZ(), 2, 2.5, 2.0, 2.5, 0.0);
+                }
                 if (ball != null) {
                     float grow = Mth.clamp(t / (float) shoot, 0, 1);
                     ball.setRadius(0.5F + 3.2F * grow);
@@ -878,6 +986,151 @@ public class GarudaEntity extends Monster implements GeoEntity {
         }
     }
 
+    // ------------------------------------------------------------ the opening: his arm, her talons, the throw
+    private void tickBlast(ServerPlayer p, ServerLevel sl, int t) {
+        Vec3 g = GarudaScene.herSpot();
+        glide(g.add(0, 2.4 + 0.12 * Math.sin(t * 0.2), 0));
+        faceYaw(GarudaScene.HER_YAW);
+        Vec3 hand = GarudaScene.blastHand(), stump = GarudaScene.blastStump();
+        int fire = GarudaMoveData.WIND_BLAST_FIRE, impact = GarudaMoveData.WIND_BLAST_IMPACT;
+        if (t == 2) {
+            playSound(SoundEvents.ELYTRA_FLYING, 2.0F, 0.4F);
+        }
+        if (t > 4 && t < fire) {
+            // the wind knots in her hand
+            double a = random.nextDouble() * Math.PI * 2, r = 2.0 + random.nextDouble() * 1.5;
+            sl.sendParticles(FeatheredKnightEntity.gust(), hand.x + Math.cos(a) * r, hand.y + (random.nextDouble() - 0.5) * 2, hand.z + Math.sin(a) * r,
+                    0, -Math.cos(a), 0.0, -Math.sin(a), 0.4);
+            sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, hand.x, hand.y, hand.z, 2, 0.4, 0.4, 0.4, 0.0);
+        }
+        if (t == fire) {
+            blastOrb = new WindBallEntity(level(), hand);
+            blastOrb.setRadius(0.9F);
+            level().addFreshEntity(blastOrb);
+            playSound(SoundEvents.TRIDENT_RIPTIDE_3, 4.0F, 0.8F);
+            playSound(SoundEvents.ENDER_DRAGON_SHOOT, 2.0F, 1.4F);
+        }
+        if (blastOrb != null && t > fire && t <= impact) {
+            double k = (t - fire) / (double) (impact - fire);
+            Vec3 at = hand.lerp(stump, k);
+            blastOrb.place(at);
+            sl.sendParticles(ParticleTypes.CLOUD, at.x, at.y, at.z, 4, 0.3, 0.3, 0.3, 0.02);
+        }
+        if (t == impact) {
+            if (blastOrb != null) {
+                blastOrb.discard();
+                blastOrb = null;
+            }
+            sl.sendParticles(ParticleTypes.EXPLOSION, stump.x, stump.y, stump.z, 3, 0.4, 0.4, 0.4, 0);
+            sl.sendParticles(FeatheredKnightEntity.gust(), stump.x, stump.y, stump.z, 60, 1.2, 1.2, 1.2, 0.0);
+            sl.sendParticles(ICHOR, stump.x, stump.y, stump.z, 60, 0.6, 0.6, 0.6, 0.0);
+            sl.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), stump.x, stump.y, stump.z, 40, 0.5, 0.5, 0.5, 0.12);
+            playSound(SoundEvents.GENERIC_EXPLODE, 3.0F, 1.2F);
+            playSound(SoundEvents.PLAYER_ATTACK_CRIT, 3.0F, 0.5F);
+            p.serverLevel().playSound(null, stump.x, stump.y, stump.z, SoundEvents.RAVAGER_HURT, net.minecraft.sounds.SoundSource.PLAYERS, 3.0F, 0.5F);
+        }
+        if (t > impact && t % 2 == 0) {
+            Vec3 s = stump.add(0, 0, 0.9 * Math.min(1.0, (t - impact) / 12.0));
+            sl.sendParticles(ICHOR, s.x, s.y, s.z, 3, 0.15, 0.1, 0.15, 0.0);
+            sl.sendParticles(ModParticles.PURPLE_FLAME.get(), s.x, s.y, s.z, 2, 0.1, 0.1, 0.1, 0.02);
+        }
+        if (t == 49) {
+            p.serverLevel().playSound(null, stump.x, stump.y, stump.z, SoundEvents.RAVAGER_ROAR, net.minecraft.sounds.SoundSource.PLAYERS, 3.0F, 0.6F);
+            p.serverLevel().playSound(null, stump.x, stump.y, stump.z, SoundEvents.ENDER_DRAGON_GROWL, net.minecraft.sounds.SoundSource.PLAYERS, 2.0F, 0.7F);
+        }
+        if (t >= GarudaScene.length(GarudaScene.BLAST)) {
+            setStage(GarudaScene.SNATCH);
+            setAnim("snatch");
+            HeroForm.triggerAvatar(p, "hg_snatched");
+            playSound(SoundEvents.PHANTOM_AMBIENT, 3.0F, 0.5F);
+        }
+    }
+
+    private void tickSnatch(ServerPlayer p, ServerLevel sl, int t) {
+        glide(GarudaScene.herSnatch(t));
+        faceYaw(GarudaScene.HER_YAW);
+        Vec3 hero = GarudaScene.heroAt(GarudaScene.SNATCH, t, balance());
+        int grab = GarudaMoveData.SNATCH_GRAB, rel = GarudaMoveData.SNATCH_RELEASE;
+        if (t == 2) {
+            playSound(SoundEvents.PHANTOM_SWOOP, 4.0F, 0.5F);
+        }
+        if (t < grab) {
+            sl.sendParticles(ParticleTypes.CLOUD, getX(), getY() + 3, getZ(), 4, 1.0, 1.0, 1.0, 0.05);
+        }
+        if (t == grab) {
+            Vec3 c = position().add(0, 2.5, 1.5);
+            playSound(SoundEvents.PLAYER_ATTACK_KNOCKBACK, 3.0F, 0.5F);
+            playSound(SoundEvents.PHANTOM_BITE, 3.0F, 0.6F);
+            sl.sendParticles(FeatheredKnightEntity.gust(), c.x, c.y, c.z, 50, 1.2, 1.2, 1.2, 0.0);
+            sl.sendParticles(ICHOR, c.x, c.y, c.z, 20, 0.5, 0.5, 0.5, 0.0);
+        }
+        boolean carrying = (t > grab && t < GarudaMoveData.SNATCH_SLAM1 - 6) || (t > GarudaMoveData.SNATCH_LIFT2 && t < GarudaMoveData.SNATCH_SLAM2 - 6)
+                || (t > 104 && t < rel + 4);
+        if (carrying && t % 11 == 0) {
+            playSound(SoundEvents.ENDER_DRAGON_FLAP, 3.0F, 0.6F);
+            sl.sendParticles(ParticleTypes.CLOUD, getX(), getY() + 1, getZ(), 30, 3.0, 0.6, 3.0, 0.08);
+        }
+        if (t == GarudaMoveData.SNATCH_SLAM1 || t == GarudaMoveData.SNATCH_SLAM2) {
+            Vec3 c = new Vec3(getX(), GarudaScene.heroSpot().y, getZ() + 1.0);
+            Network.sendBoom(sl, c.x, c.y + 0.5, c.z, c.y, 1.6F);
+            sl.sendParticles(RUBBLE, c.x, c.y + 0.4, c.z, 140, 2.6, 0.4, 2.6, 0.3);
+            sl.sendParticles(ParticleTypes.EXPLOSION, c.x, c.y + 0.5, c.z, 4, 1.5, 0.3, 1.5, 0);
+            sl.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, c.x, c.y + 0.5, c.z, 30, 3.0, 0.3, 3.0, 0.02);
+            playSound(SoundEvents.GENERIC_EXPLODE, 4.0F, 0.6F);
+            playSound(SoundEvents.IRON_GOLEM_DAMAGE, 3.0F, 0.5F);
+            p.serverLevel().playSound(null, c.x, c.y, c.z, SoundEvents.RAVAGER_HURT, net.minecraft.sounds.SoundSource.PLAYERS, 2.4F, 0.5F);
+        }
+        if (t == GarudaMoveData.SNATCH_SCREAM) {
+            playSound(SoundEvents.PHANTOM_AMBIENT, 5.0F, 0.4F);
+            playSound(SoundEvents.ENDER_DRAGON_GROWL, 2.6F, 1.4F);
+            sl.sendParticles(FeatheredKnightEntity.gust(), getX(), getY() + 6, getZ(), 120, 3.0, 2.0, 3.0, 0);
+        }
+        if (t == rel) {
+            playSound(SoundEvents.ENDER_DRAGON_FLAP, 5.0F, 0.5F);
+            playSound(SoundEvents.TRIDENT_RIPTIDE_3, 3.0F, 0.5F);
+            sl.sendParticles(FeatheredKnightEntity.gust(), getX(), getY() + 3, getZ(), 150, 3.0, 3.0, 3.0, 0);
+        }
+        if (t > rel && hero != null && t % 2 == 0) {
+            sl.sendParticles(ParticleTypes.CLOUD, hero.x, hero.y + 2, hero.z, 6, 1.0, 1.5, 1.0, 0.05);
+        }
+        if (t % 3 == 0) {
+            Vec3 s = GarudaScene.stumpSnatch(t);
+            sl.sendParticles(ICHOR, s.x, s.y, s.z, 2, 0.1, 0.1, 0.1, 0.0);
+            sl.sendParticles(ParticleTypes.SMOKE, s.x, s.y, s.z, 1, 0.1, 0.1, 0.1, 0.01);
+        }
+        if (t >= GarudaScene.length(GarudaScene.SNATCH)) {
+            beginBall(true);
+            HeroForm.triggerAvatar(p, "hg_regrow");
+        }
+    }
+
+    /** the arm burns back out of the stump, then his roar */
+    private void tickRegrow(ServerPlayer p, ServerLevel sl, int t, Vec3 hero) {
+        Vec3 arm = GarudaScene.regrowArm(hero, t);
+        int g0 = GarudaMoveData.REGROW_GROW0, g1 = GarudaMoveData.REGROW_GROW1;
+        if (t < g0 && t % 3 == 0) {
+            sl.sendParticles(ParticleTypes.SMOKE, arm.x, arm.y, arm.z, 2, 0.1, 0.1, 0.1, 0.01);
+            sl.sendParticles(ICHOR, arm.x, arm.y, arm.z, 1, 0.1, 0.1, 0.1, 0.0);
+        }
+        if (t == g0) {
+            p.serverLevel().playSound(null, arm.x, arm.y, arm.z, SoundEvents.BLAZE_SHOOT, net.minecraft.sounds.SoundSource.PLAYERS, 3.0F, 0.5F);
+            p.serverLevel().playSound(null, arm.x, arm.y, arm.z, SoundEvents.FIRECHARGE_USE, net.minecraft.sounds.SoundSource.PLAYERS, 3.0F, 0.5F);
+        }
+        if (t >= g0 && t <= g1 + 4) {
+            sl.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), arm.x, arm.y, arm.z, 8, 0.5, 0.5, 0.5, 0.06);
+            sl.sendParticles(ModParticles.PURPLE_FLAME.get(), arm.x, arm.y, arm.z, 6, 0.8, 0.8, 0.8, 0.04);
+            if (t % 6 == 0) {
+                p.serverLevel().playSound(null, arm.x, arm.y, arm.z, SoundEvents.BLAZE_BURN, net.minecraft.sounds.SoundSource.PLAYERS, 2.0F, 0.6F);
+            }
+        }
+        if (t == g1 + 6) {
+            Vec3 c = hero.add(0, 5, 0);
+            p.serverLevel().playSound(null, c.x, c.y, c.z, SoundEvents.RAVAGER_ROAR, net.minecraft.sounds.SoundSource.PLAYERS, 4.0F, 0.55F);
+            p.serverLevel().playSound(null, c.x, c.y, c.z, SoundEvents.ENDER_DRAGON_GROWL, net.minecraft.sounds.SoundSource.PLAYERS, 2.4F, 0.6F);
+            sl.sendParticles(ModParticles.PURPLE_FLAME_BIG.get(), c.x, c.y, c.z, 120, 2.0, 2.0, 2.0, 0.15);
+        }
+    }
+
     private void tickHell(ServerPlayer p, ServerLevel sl, int t) {
         Vec3 from = herHeld(), land = GarudaScene.herSpot().add(0, 0, -26);
         land = new Vec3(land.x, floorY(land.x, land.z), land.z);
@@ -916,6 +1169,7 @@ public class GarudaEntity extends Monster implements GeoEntity {
         setStage(GarudaScene.NONE);
         this.entityData.set(SCENE_PLAYER, -1);
         SHIELDED.remove(p.getUUID());
+        HeroForm.setClash(p, false);
         ended = true;
         move = MOVE_NONE;
         BlockPos c = CraterManager.centre();
@@ -989,9 +1243,15 @@ public class GarudaEntity extends Monster implements GeoEntity {
         if (!level().isClientSide) {
             if (foe != null) {
                 SHIELDED.remove(foe);
+                if (level().getServer() != null && level().getServer().getPlayerList().getPlayer(foe) instanceof ServerPlayer sp) {
+                    HeroForm.setClash(sp, false);
+                }
             }
             if (ball != null) {
                 ball.discard();
+            }
+            if (blastOrb != null) {
+                blastOrb.discard();
             }
         }
         super.remove(reason);

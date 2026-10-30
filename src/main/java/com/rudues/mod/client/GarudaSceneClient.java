@@ -127,6 +127,29 @@ public final class GarudaSceneClient {
         if (st == GarudaScene.ARRIVE && (int) t == GarudaScene.FLY_START + 12) {
             shake = 0.8F;
         }
+        int ti = (int) t;
+        if (st == GarudaScene.BLAST && ti == com.rudues.mod.entity.GarudaMoveData.WIND_BLAST_IMPACT) {
+            flash = Math.max(flash, 0.55F);
+            shake = 1.1F;
+        }
+        if (st == GarudaScene.BLAST && ti == 49) {
+            shake = Math.max(shake, 0.6F);
+        }
+        if (st == GarudaScene.SNATCH) {
+            if (ti == com.rudues.mod.entity.GarudaMoveData.SNATCH_GRAB) {
+                shake = Math.max(shake, 0.7F);
+            }
+            if (ti == com.rudues.mod.entity.GarudaMoveData.SNATCH_SLAM1 || ti == com.rudues.mod.entity.GarudaMoveData.SNATCH_SLAM2) {
+                shake = 1.3F;
+                flash = Math.max(flash, 0.25F);
+            }
+            if (ti == com.rudues.mod.entity.GarudaMoveData.SNATCH_SCREAM) {
+                shake = Math.max(shake, 0.5F);
+            }
+        }
+        if (st == GarudaScene.BALL && garuda.regrowing() && ti == com.rudues.mod.entity.GarudaMoveData.REGROW_GROW1 + 6) {
+            shake = Math.max(shake, 0.6F);
+        }
         if (st == GarudaScene.STRAIN1 || st == GarudaScene.STRAIN2) {
             shake = Math.max(shake, 0.22F);
         }
@@ -190,6 +213,29 @@ public final class GarudaSceneClient {
             hero = mc.player.getPosition(pt);
         }
         switch (st) {
+            case GarudaScene.BLAST -> {
+                int hit = com.rudues.mod.entity.GarudaMoveData.WIND_BLAST_IMPACT;
+                if (t < hit) {
+                    // over his left shoulder at her, the wind knotting in her hand
+                    float k = (float) GarudaScene.ease(t / hit);
+                    return new Shot(hs.add(-3.4 + 0.6 * k, 7.6, 7.5 - 1.5 * k), her.add(0, 4.6, 0), 58.0F - 6.0F * k);
+                }
+                // on him as it takes the arm, and his roar
+                float k = (float) GarudaScene.ease((t - hit) / 30.0);
+                return new Shot(hs.add(8.5 - 1.5 * k, 5.0 + 0.6 * k, -4.0 + 1.0 * k), hs.add(0, 4.6, 0.6), 60.0F - 4.0F * k);
+            }
+            case GarudaScene.SNATCH -> {
+                // the two of them from the side, the frame riding up and down with them; after the throw, up at him
+                Vec3 focus = hero.add(0, 3.0, 0).lerp(her.add(0, 3.5, 0), 0.5);
+                if (t > com.rudues.mod.entity.GarudaMoveData.SNATCH_RELEASE) {
+                    float k = (float) GarudaScene.ease((t - com.rudues.mod.entity.GarudaMoveData.SNATCH_RELEASE) / 26.0);
+                    Vec3 from = focus.add(16, 2.0, 5);
+                    Vec3 low = hs.add(10, 2.5, -6);
+                    return new Shot(from.lerp(low, k), focus.lerp(hero.add(0, 4, 0), k), 62.0F);
+                }
+                double lift = Math.max(0, focus.y - hs.y - 6) * 0.35;
+                return new Shot(focus.add(16, 1.5 - lift, 6), focus, 62.0F);
+            }
             case GarudaScene.ARRIVE -> {
                 Vec3 a = GarudaScene.heroArrive();
                 if (t < GarudaScene.SCREECH) {
@@ -207,6 +253,13 @@ public final class GarudaSceneClient {
                 return new Shot(mid.add(17, 4 + 0.3 * Math.max(0, hero.y - hs.y), 3), look, 64.0F);
             }
             case GarudaScene.BALL, GarudaScene.STRAIN1 -> {
+                int closeUntil = com.rudues.mod.entity.GarudaMoveData.WINDBALL_FORM_SHOOT - 6;
+                if (st == GarudaScene.BALL && g.regrowing() && t < closeUntil) {
+                    // up with him: the arm burning back, the roar; she is far below gathering the ball
+                    float k = (float) GarudaScene.ease(t / closeUntil);
+                    return new Shot(hero.add(9.0 - 1.5 * k, 4.6 + 0.8 * k, -8.5 + 1.5 * k), hero.add(0, 4.4, 0).lerp(her.add(0, 4, 0), 0.06 * k),
+                            58.0F + 4.0F * k);
+                }
                 double a = st == GarudaScene.STRAIN1 ? 0.18 * Math.sin(t * 0.03) : 0.0;
                 Vec3 focus = GarudaScene.ballLow().lerp(hero.add(0, 2, 0), 0.5);
                 return new Shot(focus.add(20 * Math.cos(a), 1.0, 20 * Math.sin(a)), focus, 60.0F);
