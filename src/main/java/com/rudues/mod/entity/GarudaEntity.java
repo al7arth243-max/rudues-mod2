@@ -1243,7 +1243,8 @@ public class GarudaEntity extends Monster implements GeoEntity {
         if (!level().isClientSide) {
             if (foe != null) {
                 SHIELDED.remove(foe);
-                if (level().getServer() != null && level().getServer().getPlayerList().getPlayer(foe) instanceof ServerPlayer sp) {
+                ServerPlayer sp = level().getServer() == null ? null : level().getServer().getPlayerList().getPlayer(foe);
+                if (sp != null) {
                     HeroForm.setClash(sp, false);
                 }
             }
