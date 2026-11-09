@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "minecraft:block/crimson_stairs", "y": 90 },
+    "facing=east":  { "model": "minecraft:block/crimson_stairs", "y": 180 },
+    "facing=south": { "model": "minecraft:block/crimson_stairs", "y": 270 },
+    "facing=west":  { "model": "minecraft:block/crimson_stairs" }
+  }
+}

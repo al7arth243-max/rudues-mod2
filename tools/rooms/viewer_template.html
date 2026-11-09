@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nazarick Rooms — Build Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0e0c14; --panel:rgba(20,16,30,.86); --line:#3a2f52; --gold:#e8c46a; --ink:#e9e4f2; --dim:#9a90ad; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--ink); font-family:Inter,system-ui,sans-serif; overflow:hidden; }
+  #c { position:fixed; inset:0; display:block; }
+  .panel { position:fixed; background:var(--panel); border:1px solid var(--line); border-radius:10px; backdrop-filter:blur(6px); }
+  #top { top:12px; left:12px; padding:12px 14px; max-width:340px; }
+  h1 { font-family:Cinzel,serif; font-size:17px; margin:0 0 2px; color:var(--gold); letter-spacing:.06em; }
+  .sub { font-size:12px; color:var(--dim); margin-bottom:10px; }
+  .tabs { display:flex; gap:6px; margin-bottom:10px; }
+  button { font:inherit; font-size:12.5px; color:var(--ink); background:#241d36; border:1px solid var(--line); border-radius:7px; padding:6px 10px; cursor:pointer; }
+  button:hover { border-color:#6a5591; }
+  button.on { background:#3b2b5e; border-color:var(--gold); color:#fff; }
+  .row { display:flex; align-items:center; gap:8px; font-size:12.5px; margin:7px 0; }
+  .row label { min-width:84px; color:var(--dim); }
+  input[type=range] { flex:1; accent-color:var(--gold); }
+  .val { width:28px; text-align:right; font-variant-numeric:tabular-nums; }
+  .views { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  #info { bottom:12px; left:12px; padding:10px 14px; font-size:12px; color:var(--dim); max-width:420px; line-height:1.5; }
+  #info b { color:var(--ink); font-weight:500; }
+  #notes { top:12px; right:12px; padding:12px 14px; width:290px; font-size:12px; line-height:1.55; max-height:calc(100% - 50px); overflow:auto; }
+  #notes h2 { font-family:Cinzel,serif; font-size:13px; color:var(--gold); margin:0 0 6px; letter-spacing:.05em; }
+  #notes ul { margin:0; padding-left:16px; }
+  #notes li { margin:3px 0; }
+  .chk { display:flex; gap:6px; align-items:center; font-size:12.5px; color:var(--dim); cursor:pointer; }
+  @media (max-width:760px){ #notes{ display:none; } #top{ max-width:calc(100% - 50px);} }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="top" class="panel">
+  <h1>NAZARICK · BUILD PREVIEW</h1>
+  <div class="sub">Minecraft 1.20.1 structure templates · drag to orbit, scroll to zoom, right-drag to pan</div>
+  <div class="tabs" id="tabs" style="flex-wrap:wrap"></div>
+  <div class="row"><label>Cut ceiling at</label><input id="cut" type="range" min="1" max="27" value="27"><span class="val" id="cutv">27</span></div>
+  <div class="row"><label>Hide front</label><input id="front" type="range" min="0" max="30" value="0"><span class="val" id="frontv">0</span></div>
+  <div class="row"><label class="chk"><input type="checkbox" id="anch"> Show NPC/anchor points</label></div>
+  <div class="views">
+    <button data-view="entrance">Entrance eye-level</button>
+    <button data-view="dais">From the dais</button>
+    <button data-view="detail">Close-up</button>
+    <button data-view="vault">Look up</button>
+    <button data-view="orbit">Overview</button>
+    <button data-view="top">Floor plan</button>
+  </div>
+</div>
+<div id="notes" class="panel"></div>
+<div id="info" class="panel"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const DATA = __DATA__;
+const LABELS = { great_tomb: "Whole Great Tomb", tomb_surface: "Surface", tomb_antechamber: "Hall of Lemegeton", throne_room: "Throne Room", kings_quarters: "King's Quarters" };
+const NOTES = {
+  great_tomb: {
+    title: "The Great Tomb of Nazarick (assembled)",
+    dims: "102 × 98 × 182 blocks as it generates in the Overworld: one per world, a few hundred blocks from spawn. Shown without the surrounding terrain.",
+    items: [
+      "Surface: a walled graveyard with a mausoleum, guarded by two Elder Liches.",
+      "A 70-block spiral stair runs from the mausoleum floor down to the tomb.",
+      "Hall of Lemegeton: demon statues, two Death Knights guarding the throne doors.",
+      "Throne Room (Albedo at the throne) straight ahead; a corridor east leads to the King's Quarters (Sebas and four maids).",
+      "Use 'Cut ceiling' to slice through the layers, or 'Hide front' to open the north side."
+    ]
+  },
+  tomb_surface: {
+    title: "Surface: graveyard & mausoleum",
+    dims: "61 × 34 × 61, floor sits on the terrain with a 6-block foundation.",
+    items: [
+      "Mossy perimeter wall with lantern pillars and a skull-topped gate (north).",
+      "Grave rows, dead trees, cobwebs and gravel paths.",
+      "White-and-black mausoleum with a stepped roof and gold spire; inside, the railed stairwell down.",
+      "Two Elder Liches haunt the graveyard."
+    ]
+  },
+  tomb_antechamber: {
+    title: "Hall of Lemegeton",
+    dims: "21 × 30 × 22, between the stair shaft and the Throne Room doors.",
+    items: [
+      "Seven demon statues with crying-obsidian eyes, gold plinths and folded wings.",
+      "Pointed vault with ribs, two soul-lantern chandeliers.",
+      "The 25-block-tall portal into the Throne Room, framed in gold.",
+      "Two Death Knights stand guard."
+    ]
+  },
+  throne_room: {
+    title: "Throne Room",
+    dims: "63 × 52 × 125 blocks (interior 57 wide, 119 long, 50 to the vault ridge). Entrance north, throne south facing the doors.",
+    items: [
+      "Ribbed vault: transverse and diagonal ribs, a gold boss in every bay, a ridge rib, and a starry web of amethyst and sea-lantern glints.",
+      "12 fluted basalt pilasters on each wall, 33 blocks tall, with plinths, gold capitals and two tiers of lamp brackets.",
+      "Each bay: wainscot and chair rail, a recessed navy panel holding two banners, a string course, and a backlit pointed clerestory window with a gold mullion.",
+      "41 banners for the Supreme Beings, plus the guild banner over the doors.",
+      "Great doors standing open: gold-banded leaves with carved relief, under a two-ring gold and blackstone archivolt flanked by columns.",
+      "Rose window above the doors, with gold tracery in purple, blue and red glass.",
+      "12 crystal claws, each about 30 blocks tall from the floor, on stepped swirl bases and 5×5 gold-banded pedestals. They curve in over the hall.",
+      "Inlaid diamond-lattice floor with border bands. Red runway with pink medallions.",
+      "Dais: 6 steps, 33 wide, with cheek walls and balusters, lamp newels, a balustraded platform and a two-tier gilded plinth.",
+      "The throne: a 7-wide, 18-tall pointed back with gold edges, a gilded inner border, crimson and shroomlight inlay, and spire finials. A 12-spike crystal crown fans out behind it.",
+      "Backdrop: a starlit slatted wall of backlit stained glass in a pointed gold frame."
+    ]
+  },
+  kings_quarters: {
+    title: "King's Quarters",
+    dims: "35 × 28 × 52 blocks. No furniture: the dais, lounge and rooms are left empty for later.",
+    items: [
+      "Two-storey arcade: piers with base flares, navy inset panels, double gold candle sconces, corbelled capitals and keystoned arches.",
+      "Balconies with a nosing, baluster rail and draped ivy. Upper columns carry a second row of arches.",
+      "Two-tier cornice and a coffered ceiling: quartz beams, blue-grey coffers, gold rosettes.",
+      "Dome: 16 ribs, gold band, coffer ring and froglight oculus. The crystal chandelier hangs from it.",
+      "Backlit windows in both aisles and both galleries. Stairs at the front lead up to the galleries.",
+      "Entrance: quartz jambs, entablature and pediment, a rose window above, and blind navy arches with banners on either side.",
+      "Back wall: framed great doors, a gold guild-emblem relief, a cornice, and three gothic windows with gold tracery.",
+      "Empty dais (future desk) with balustraded steps and lamp newels. Its side arches are balconies over the aisles.",
+      "Bedroom and dressing room shells: parquet floors, dark-oak wainscot, panelled walls, coffered ceilings, tall windows.",
+      "Bedroom: soul-fire hearth with chimney breast. Dressing room: two arched niches."
+    ]
+  }
+};
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0e0c14);
+const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 500);
+const controls = new THREE.OrbitControls(camera, canvas);
+controls.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xd9d4ff, 0x3a3048, 0.85));
+const sun = new THREE.DirectionalLight(0xffffff, 0.55); sun.position.set(30, 60, -20); scene.add(sun);
+const fill = new THREE.DirectionalLight(0xffe6c0, 0.25); fill.position.set(-30, 20, 50); scene.add(fill);
+
+const unit = new THREE.BoxGeometry(1,1,1); unit.translate(.5,.5,.5);
+let group = null, current = Object.keys(DATA)[0], meshes = [];
+const tmpM = new THREE.Matrix4(), tmpC = new THREE.Color();
+
+function build(room) {
+  if (group) { scene.remove(group); group.traverse(o => { if (o.material) o.material.dispose(); }); }
+  group = new THREE.Group(); meshes = [];
+  const d = DATA[room];
+  const cols = d.colors.map(c => new THREE.Color(c));
+  const mats = {
+    o: new THREE.MeshLambertMaterial(),
+    e: new THREE.MeshBasicMaterial(),
+    t: new THREE.MeshLambertMaterial({transparent:true, opacity:.5, depthWrite:false})
+  };
+  for (const k of ['o','e','t']) {
+    const arr = d.boxes[k]; if (!arr.length) continue;
+    const m = new THREE.InstancedMesh(unit, mats[k], arr.length);
+    arr.forEach((b, i) => {
+      const h = Math.sin(b[0]*12.9898 + b[1]*78.233 + b[2]*37.719) * 43758.5453;
+      const j = 0.9 + 0.2 * (h - Math.floor(h));
+      m.setColorAt(i, cols[b[6]].clone().multiplyScalar(k === 'e' ? 1.15 : j));
+    });
+    m.userData.boxes = arr;
+    group.add(m); meshes.push(m);
+  }
+  // anchors
+  const ag = new THREE.Group(); ag.name = 'anchors';
+  const pal = [0xff5577, 0x55ddff, 0xffdd55, 0x88ff88, 0xcc88ff, 0xffaa55, 0xffffff];
+  Object.entries(d.anchors).forEach(([name, list], i) => {
+    const mat = new THREE.MeshBasicMaterial({color: pal[i % pal.length]});
+    list.forEach(([x,y,z]) => {
+      const s = new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,1.8,10), mat);
+      s.position.set(x+.5, y+.9, z+.5); s.userData.name = name; ag.add(s);
+    });
+  });
+  ag.visible = document.getElementById('anch').checked;
+  // player-sized figures for scale (1.8 blocks tall)
+  const pm = new THREE.MeshLambertMaterial({color: 0x2bd4a8});
+  const spots = room !== 'throne_room' && room !== 'kings_quarters' ? [] : room === 'throne_room' ? [[d.size[0]/2 - 1.5, 1, 16], [d.size[0]/2 + 1.5, 1, 60], [d.size[0]/2 - 3, 7, 104]] : [[d.size[0]/2 - 2, 1, 8], [d.size[0]/2, 4, 34]];
+  spots.forEach(([x,y,z]) => {
+    const body = new THREE.Mesh(new THREE.BoxGeometry(.6, 1.35, .35), pm); body.position.set(x, y + .675, z); group.add(body);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(.5, .5, .5), pm); head.position.set(x, y + 1.6, z); group.add(head);
+  });
+  group.add(ag);
+  scene.add(group);
+  const cut = document.getElementById('cut'); cut.max = d.size[1]; cut.value = d.size[1];
+  document.getElementById('front').value = 0;
+  applyCut();
+  const n = NOTES[room];
+  document.getElementById('notes').innerHTML = `<h2>${n.title}</h2><div style="color:var(--dim);margin-bottom:6px">${n.dims}</div><ul>${n.items.map(i=>`<li>${i}</li>`).join('')}</ul>`;
+  const a = Object.entries(d.anchors).map(([k,v]) => `${k} ×${v.length}`).join(' · ');
+  document.getElementById('info').innerHTML = `<b>${n.title}</b> · ${d.size.join(' × ')} blocks · <span style="color:#2bd4a8">■</span> green figures are player-sized (1.8 blocks) · place with <b>/place template nazarick:${room} ~ ~ ~</b><br>Anchors: ${a}`;
+  setView('orbit');
+}
+
+function applyCut() {
+  const cy = +document.getElementById('cut').value, fz = +document.getElementById('front').value;
+  document.getElementById('cutv').textContent = cy; document.getElementById('frontv').textContent = fz;
+  for (const m of meshes) {
+    m.userData.boxes.forEach((b, i) => {
+      const hide = b[1] >= cy || b[2] < fz;
+      tmpM.makeScale(hide ? 0 : b[3], hide ? 0 : b[4], hide ? 0 : b[5]);
+      tmpM.setPosition(b[0], b[1], b[2]);
+      m.setMatrixAt(i, tmpM);
+    });
+    m.instanceMatrix.needsUpdate = true;
+  }
+}
+
+function setView(v) {
+  const [W, H, D] = DATA[current].size;
+  const cx = W/2, T = current === 'throne_room';
+  if (!['throne_room','kings_quarters'].includes(current) && !['orbit','top'].includes(v)) v = 'orbit';
+  if (current === 'great_tomb' && v === 'orbit') { camera.position.set(cx + W*1.3, H*1.6, -D*0.35); controls.target.set(cx, H*0.35, D*0.45); controls.update(); return; }
+  const P = {
+    orbit:    [[cx + W*1.1, H*2.0, -D*0.5], [cx, 4, D*0.5]],
+    entrance: T ? [[cx, 4, 12], [cx, 16, 118]] : [[cx, 3.2, 3.5], [cx, 8, 36]],
+    dais:     T ? [[cx, 14, 108], [cx, 14, 5]] : [[cx, 6.2, 36.5], [cx, 6, 4]],
+    detail:   T ? [[cx, 12, 97], [cx, 17, 118]] : [[6, 12.5, 6], [20, 9, 24]],
+    vault:    T ? [[cx, 3, 60], [cx, 50, 61]] : [[cx, 3, 15], [cx, 30, 15.5]],
+    top:      [[cx, H*3.2, D/2 + 0.01], [cx, 0, D/2]]
+  }[v];
+  camera.position.set(...P[0]); controls.target.set(...P[1]); controls.update();
+}
+
+Object.keys(DATA).forEach((k, i) => {
+  const b = document.createElement('button'); b.dataset.room = k; b.textContent = LABELS[k] || k;
+  if (i === 0) b.classList.add('on');
+  b.onclick = () => { document.querySelectorAll('[data-room]').forEach(x => x.classList.toggle('on', x === b)); current = k; build(k); };
+  document.getElementById('tabs').appendChild(b);
+});
+document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => setView(b.dataset.view));
+document.getElementById('cut').oninput = applyCut;
+document.getElementById('front').oninput = applyCut;
+document.getElementById('anch').onchange = e => { const a = group.getObjectByName('anchors'); if (a) a.visible = e.target.checked; };
+
+function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+build(current);
+(function loop(){ requestAnimationFrame(loop); controls.update(); renderer.render(scene, camera); })();
+</script>
+</body>
+</html>

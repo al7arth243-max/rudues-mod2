@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "nazarick:item/staff_of_ainz_ooal_gown_6"
+  }
+}

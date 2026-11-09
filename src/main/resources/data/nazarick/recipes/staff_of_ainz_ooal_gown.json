@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": ["GDG", " B ", " B "],
+  "key": {
+    "G": { "item": "minecraft:gold_block" },
+    "D": { "item": "minecraft:diamond" },
+    "B": { "item": "minecraft:blaze_rod" }
+  },
+  "result": { "item": "nazarick:staff_of_ainz_ooal_gown" }
+}

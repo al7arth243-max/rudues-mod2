@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "minecraft:ender_eye" },
+    { "item": "minecraft:bone" },
+    { "item": "minecraft:amethyst_shard" },
+    { "item": "minecraft:gold_ingot" }
+  ],
+  "result": { "item": "nazarick:eye_of_nazarick", "count": 1 }
+}

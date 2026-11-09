@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nazarick — NPCs & Undead Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --panel:rgba(20,16,30,.88); --line:#3a2f52; --gold:#e8c46a; --ink:#e9e4f2; --dim:#9a90ad; }
+  html,body { margin:0; height:100%; background:#0e0c14; color:var(--ink); font-family:Inter,system-ui,sans-serif; overflow:hidden; }
+  #c { position:fixed; inset:0; display:block; }
+  .panel { position:fixed; background:var(--panel); border:1px solid var(--line); border-radius:10px; }
+  #ui { top:12px; left:12px; padding:12px 14px; width:330px; }
+  h1 { font-family:Cinzel,serif; font-size:16px; margin:0 0 2px; color:var(--gold); letter-spacing:.06em; }
+  .sub { font-size:12px; color:var(--dim); margin-bottom:10px; }
+  .row { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+  button { font:inherit; font-size:12.5px; color:var(--ink); background:#241d36; border:1px solid var(--line); border-radius:7px; padding:6px 10px; cursor:pointer; }
+  button:hover { border-color:#6a5591; }
+  button.on { background:#3b2b5e; border-color:var(--gold); color:#fff; }
+  label { font-size:12.5px; color:var(--dim); display:flex; gap:6px; align-items:center; }
+  #desc { bottom:12px; left:12px; padding:10px 14px; max-width:520px; font-size:12.5px; line-height:1.5; color:var(--dim); }
+  #desc b { color:var(--ink); font-weight:500; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui" class="panel">
+  <h1>NAZARICK · MOBS & NPCS</h1>
+  <div class="sub">Same model, textures and keyframes as the mod. Drag to orbit, scroll to zoom.</div>
+  <div class="row" id="models"></div>
+  <div class="row" id="anims"></div>
+  <div class="row">
+    <label><input type="checkbox" id="walk"> Walking</label>
+    <label><input type="checkbox" id="steve" checked> Player for scale</label>
+    <label><input type="checkbox" id="spin"> Turntable</label>
+  </div>
+</div>
+<div id="desc" class="panel"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const MODELS = __MODELS__;
+const INFO = {
+  albedo: ["Albedo", "NPC / raid boss · Overseer of the Floor Guardians. Uses your skin, plus 3D horns and black wings. Courteous to the ruler and staff bearers; intruders in the Throne Room face her halberd and a boss bar (try Combat stance and Attack)."],
+  sebas: ["Sebas Tian", "NPC · Head butler. Uses your skin. Idle: stands with his hands behind his back. Right-click: he bows with a hand on his chest and speaks."],
+  elder_lich: ["Elder Lich", "Hostile undead caster, about 2.2 blocks tall. Hooded skull with one glowing red eye, blue-orb necklace, spinning gold-and-black ribbon, and glowing red orbs circling it. Fires 3-bolt volleys and teleports away when you get close."],
+  homunculus_maid: ["Homunculus Maid", "NPC · Tier 3 servant of the Royal Suite, with three hair/eye variants and a random name. Idle: hands folded. Right-click: curtsy. They gather in the Throne Room during the claim."],
+  death_knight: ["Death Knight", "Hostile undead, about 3.2 blocks tall (Warden scale). Horned skull helm, spiked armour, exposed ribs, tattered cape, flamberge and tower shield. Roars when it spots you, swings overhead, blocks arrows from the front, and survives its first death blow at 1 HP."]
+};
+const ANIM_NAMES = { COMBAT: "Combat stance", IDLE: "Idle", WALK: "Walk", GREET: "Greet (right-click)", CAST: "Cast", ATTACK: "Attack", BLOCK: "Shield block", ROAR: "Roar" };
+
+const renderer = new THREE.WebGLRenderer({canvas: document.getElementById('c'), antialias: true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x15121d);
+const camera = new THREE.PerspectiveCamera(40, 1, 1, 2000);
+const controls = new THREE.OrbitControls(camera, renderer.domElement); controls.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x554466, 0.9));
+const dl = new THREE.DirectionalLight(0xffffff, 0.5); dl.position.set(-40, 80, -60); scene.add(dl);
+const grid = new THREE.GridHelper(160, 10, 0x3a2f52, 0x2a2238); scene.add(grid);
+
+// ---- vanilla ModelPart.Cube geometry (exact vertex/UV layout)
+function cubeGeometry(c, tw, th) {
+  let [x, y, z, w, h, d, u, v, g, mirror] = c;
+  let x0 = x - g, y0 = y - g, z0 = z - g, x1 = x + w + g, y1 = y + h + g, z1 = z + d + g;
+  if (mirror) [x0, x1] = [x1, x0];
+  const V = { v7:[x0,y0,z0], v:[x1,y0,z0], v1:[x1,y1,z0], v2:[x0,y1,z0], v3:[x0,y0,z1], v4:[x1,y0,z1], v5:[x1,y1,z1], v6:[x0,y1,z1] };
+  const u0=u, u1=u+d, u2=u+d+w, u3=u+d+w+w, u4=u+d+w+d, u5=u+d+w+d+w, w0=v, w1=v+d, w2=v+d+h;
+  const polys = [
+    [['v4','v3','v7','v'], u1,w0,u2,w1], [['v1','v2','v6','v5'], u2,w1,u3,w0],
+    [['v7','v3','v6','v2'], u0,w1,u1,w2], [['v','v7','v2','v1'], u1,w1,u2,w2],
+    [['v4','v','v1','v5'], u2,w1,u4,w2], [['v3','v4','v5','v6'], u4,w1,u5,w2] ];
+  const pos = [], uv = [];
+  for (const [vs, a1, b1, a2, b2] of polys) {
+    const uvs = [[a2,b1],[a1,b1],[a1,b2],[a2,b2]];
+    for (const i of [0,1,2,0,2,3]) { pos.push(...V[vs[i]]); uv.push(uvs[i][0]/tw, 1 - uvs[i][1]/th); }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.computeVertexNormals();
+  return geo;
+}
+function loadTex(uri) { const t = new THREE.TextureLoader().load(uri); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; return t; }
+
+let current = null;
+function buildModel(key) {
+  const M = MODELS[key];
+  const mat = new THREE.MeshLambertMaterial({ map: loadTex(M.tex), side: THREE.DoubleSide, alphaTest: 0.1 });
+  const gmat = M.glow ? new THREE.MeshBasicMaterial({ map: loadTex(M.glow), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }) : null;
+  const parts = {};
+  const root = new THREE.Group(); root.scale.set(-1, -1, 1); root.position.y = 24;
+  function make(p, parent) {
+    const g = new THREE.Group(); g.rotation.order = 'ZYX';
+    g.userData.base = { off: p.off.slice(), rot: p.rot.map(a => a * Math.PI / 180) };
+    for (const c of p.cubes) {
+      const geo = cubeGeometry(c, M.tw, M.th);
+      g.add(new THREE.Mesh(geo, mat));
+      if (gmat) g.add(new THREE.Mesh(geo, gmat));
+    }
+    parts[p.name] = g; parent.add(g);
+    p.children.forEach(ch => make(ch, g));
+  }
+  M.roots.forEach(r => make(r, root));
+  return { key, root, parts, anims: M.anims };
+}
+
+// ---- vanilla keyframe interpolation
+function catmull(a, p0, p1, p2, p3) { return 0.5 * (2*p1 + (p2-p0)*a + (2*p0 - 5*p1 + 4*p2 - p3)*a*a + (3*p1 - p0 - 3*p2 + p3)*a*a*a); }
+function sample(keys, t, lin) {
+  let i = 0; while (i < keys.length - 1 && t > keys[i+1][0]) i++;
+  if (t <= keys[0][0]) i = 0;
+  const j = Math.min(keys.length - 1, i + 1);
+  const k1 = keys[i], k2 = keys[j];
+  const a = j !== i ? Math.min(1, Math.max(0, (t - k1[0]) / (k2[0] - k1[0]))) : 0;
+  const p0 = keys[Math.max(0, i-1)], p3 = keys[Math.min(keys.length-1, j+1)];
+  return [1,2,3].map(c => lin ? k1[c] + (k2[c]-k1[c]) * a : catmull(a, p0[c], k1[c], k2[c], p3[c]));
+}
+function applyAnim(m, def, seconds, scale) {
+  const t = def.loop ? seconds % def.length : Math.min(seconds, def.length);
+  for (const [name, ch] of Object.entries(def.ch)) {
+    const g = m.parts[name]; if (!g) continue;
+    if (ch.rot) { const r = sample(ch.rot, t, ch.lin); g.rotation.x += r[0]*Math.PI/180*scale; g.rotation.y += r[1]*Math.PI/180*scale; g.rotation.z += r[2]*Math.PI/180*scale; }
+    if (ch.pos) { const p = sample(ch.pos, t, ch.lin); g.position.x += p[0]*scale; g.position.y -= p[1]*scale; g.position.z += p[2]*scale; }
+  }
+}
+
+// player for scale (1.8 blocks = 28.8 px)
+const steve = new THREE.Group();
+const sm = new THREE.MeshLambertMaterial({ color: 0x2bd4a8 });
+[[0,6,0,4,12,4],[0,18,0,8,12,4],[0,28,0,8,8,8],[-6,18,0,4,12,4],[6,18,0,4,12,4]].forEach(([x,y,z,w,h,d]) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), sm); b.position.set(x,y,z); steve.add(b); });
+const leg2 = new THREE.Mesh(new THREE.BoxGeometry(4,12,4), sm); leg2.position.set(4,6,0); steve.add(leg2); steve.children[0].position.x = -2; leg2.position.x = 2;
+steve.scale.setScalar(28.8/32); steve.position.set(30, 0, 0); scene.add(steve);
+
+let oneShot = null, oneShotStart = 0, t0 = performance.now();
+function select(key) {
+  if (current) scene.remove(current.root);
+  current = buildModel(key); scene.add(current.root);
+  document.querySelectorAll('#models button').forEach(b => b.classList.toggle('on', b.dataset.k === key));
+  const ab = document.getElementById('anims'); ab.innerHTML = '';
+  Object.entries(current.anims).forEach(([n, a]) => {
+    if (n === 'IDLE' || n === 'WALK') return;
+    const b = document.createElement('button'); b.textContent = '▶ ' + (ANIM_NAMES[n] || n);
+    b.onclick = () => { oneShot = n; oneShotStart = performance.now(); }; ab.appendChild(b);
+  });
+  const [title, d] = INFO[key]; document.getElementById('desc').innerHTML = `<b>${title}</b> — ${d}`;
+  const big = key === 'death_knight';
+  camera.position.set(-55, big ? 40 : 30, -70); controls.target.set(0, big ? 26 : 17, 0); controls.update();
+  oneShot = null;
+}
+Object.keys(MODELS).forEach(k => { const b = document.createElement('button'); b.dataset.k = k; b.textContent = INFO[k][0]; b.onclick = () => select(k); document.getElementById('models').appendChild(b); });
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  const secs = (now - t0) / 1000;
+  const m = current;
+  for (const g of Object.values(m.parts)) { const b = g.userData.base; g.position.set(...b.off); g.rotation.set(b.rot[0], b.rot[1], b.rot[2]); }
+  if (document.getElementById('walk').checked && m.anims.WALK) applyAnim(m, m.anims.WALK, secs, 1);
+  const os = oneShot ? m.anims[oneShot] : null;
+  const osT = os ? (now - oneShotStart) / 1000 : 0;
+  if (os && osT > os.length) oneShot = null;
+  const npcGreet = os && (oneShot === 'GREET' || oneShot === 'COMBAT');
+  if (!npcGreet && m.anims.IDLE) applyAnim(m, m.anims.IDLE, secs, 1);
+  if (os && oneShot) applyAnim(m, os, osT, 1);
+  if (m.parts.halberd) m.parts.halberd.visible = !!(os && (oneShot === 'COMBAT' || oneShot === 'ATTACK'));
+  if (document.getElementById('spin').checked) m.root.rotation.y = secs * 0.6; else m.root.rotation.y = 0;
+  steve.visible = document.getElementById('steve').checked;
+  controls.update(); renderer.render(scene, camera);
+}
+function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+select('death_knight');
+requestAnimationFrame(frame);
+window.__select = select; window.__play = n => { oneShot = n; oneShotStart = performance.now(); };
+</script>
+</body>
+</html>

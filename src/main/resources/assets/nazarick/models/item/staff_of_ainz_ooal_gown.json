@@ -1,0 +1,50 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "nazarick:item/staff_of_ainz_ooal_gown_0"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "nazarick:gems": 0.14
+      },
+      "model": "nazarick:item/staff_of_ainz_ooal_gown_1"
+    },
+    {
+      "predicate": {
+        "nazarick:gems": 0.28
+      },
+      "model": "nazarick:item/staff_of_ainz_ooal_gown_2"
+    },
+    {
+      "predicate": {
+        "nazarick:gems": 0.42
+      },
+      "model": "nazarick:item/staff_of_ainz_ooal_gown_3"
+    },
+    {
+      "predicate": {
+        "nazarick:gems": 0.57
+      },
+      "model": "nazarick:item/staff_of_ainz_ooal_gown_4"
+    },
+    {
+      "predicate": {
+        "nazarick:gems": 0.71
+      },
+      "model": "nazarick:item/staff_of_ainz_ooal_gown_5"
+    },
+    {
+      "predicate": {
+        "nazarick:gems": 0.85
+      },
+      "model": "nazarick:item/staff_of_ainz_ooal_gown_6"
+    },
+    {
+      "predicate": {
+        "nazarick:gems": 0.99
+      },
+      "model": "nazarick:item/staff_of_ainz_ooal_gown_7"
+    }
+  ]
+}
